@@ -87,3 +87,4 @@ cargo_asan test --test <module_name>
 
 # Run with ThreadSanitizer
 cargo_tsan test --test <module_name>
+```
