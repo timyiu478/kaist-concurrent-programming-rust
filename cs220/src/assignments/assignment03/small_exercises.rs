@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use regex::Regex;
 
 /// Day of week.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,7 +27,13 @@ pub enum DayOfWeek {
 ///
 /// `next_weekday(Thu)` is `Fri`; and `next_weekday(Fri)` is `Mon`.
 pub fn next_weekday(day: DayOfWeek) -> DayOfWeek {
-    todo!()
+    match day {
+        DayOfWeek::Thu => DayOfWeek::Fri,
+        DayOfWeek::Fri | DayOfWeek::Sat | DayOfWeek::Sun => DayOfWeek::Mon,
+        DayOfWeek::Mon => DayOfWeek::Tue,
+        DayOfWeek::Tue => DayOfWeek::Wed,
+        DayOfWeek::Wed => DayOfWeek::Thu,
+    }
 }
 
 /// Given a list of integers, returns its median (when sorted, the value in the middle position).
@@ -52,7 +59,19 @@ pub fn next_weekday(day: DayOfWeek) -> DayOfWeek {
 ///
 /// Returns `None` if the list is empty.
 pub fn median(values: Vec<isize>) -> Option<isize> {
-    todo!()
+    if values.len() == 0 {
+        return None
+    }
+
+    let mut v = values.clone();
+
+    v.sort();
+
+    if v.len() % 2 == 0 {
+        return Some(v[v.len()/2]);
+    }
+
+    Some(v[(v.len()+1)/2-1])
 }
 
 /// Given a list of integers, returns its smallest mode (the value that occurs most often; a hash
@@ -60,7 +79,28 @@ pub fn median(values: Vec<isize>) -> Option<isize> {
 ///
 /// Returns `None` if the list is empty.
 pub fn mode(values: Vec<isize>) -> Option<isize> {
-    todo!()
+    if values.len() == 0 {
+        return None;
+    }
+
+    let mut counts = HashMap::new();
+    for &v in &values {
+        *counts.entry(v).or_insert(0) += 1;
+    }
+
+    let mut smallest_mode = values[0];
+    let mut max_count = *counts.get(&values[0]).unwrap();
+
+    for (&num, &count) in &counts {
+        if count > max_count {
+            max_count = count;
+            smallest_mode = num;
+        } else if count == max_count && num < smallest_mode {
+            smallest_mode = num;
+        }
+    }
+
+    Some(smallest_mode)
 }
 
 /// Converts the given string to Pig Latin. Use the rules below to translate normal English into Pig
@@ -83,7 +123,30 @@ pub fn mode(values: Vec<isize>) -> Option<isize> {
 ///
 /// You may assume the string only contains lowercase alphabets, and it contains at least one vowel.
 pub fn piglatin(input: String) -> String {
-    todo!()
+    let vowel: HashSet<char> = ['a', 'e', 'i', 'o', 'u'].into_iter().collect();
+
+    if let Some(first_chr) = input.chars().nth(0) {
+        // Case 3: a word starts with a vowel
+        if vowel.contains(&first_chr) {
+            let mut output = input.clone();
+            output.push_str("hay");
+            return output;
+        } else {
+            // Case 1/2. a word starts with multiple consonants
+            let first_vowel_pos = input
+                .char_indices()
+                .find(|(_, c)| vowel.contains(&c))
+                .map(|(index, _)| index);
+            if let Some(index) = first_vowel_pos {
+                let (before, after) = input.split_at(index);
+                let mut rearranged_str = format!("{}{}", after, before);
+                rearranged_str.push_str("ay");
+                return rearranged_str;
+            }
+        }
+    }
+
+    input
 }
 
 /// Converts HR commands to the organization table.
@@ -109,7 +172,54 @@ pub fn piglatin(input: String) -> String {
 ///
 /// See the test function for more details.
 pub fn organize(commands: Vec<String>) -> HashMap<String, HashSet<String>> {
-    todo!()
+    let re_add = Regex::new(r"^Add (?<person>[\w-]+) to (?<dept>[\w-]+)$").unwrap();
+    let re_rm = Regex::new(r"^Remove (?<person>[\w-]+) from (?<dept>[\w-]+)$").unwrap();
+    let re_move = Regex::new(r"^Move (?<person>[\w-]+) from (?<from_dept>[\w-]+) to (?<to_dept>[\w-]+)$").unwrap();
+
+    let mut map: HashMap<String, HashSet<String>> = HashMap::new();
+
+    for command in &commands {
+        if let Some(caps) = re_add.captures(command) {
+            let person = caps["person"].to_string();
+            let dept = caps["dept"].to_string();
+            
+            assert!(map.entry(dept).or_default().insert(person));
+        } else if let Some(caps) = re_rm.captures(command) {
+            let person = &caps["person"];
+            let dept = &caps["dept"];
+
+            let is_executable = map.get(dept)
+                .map_or(false, |persons| persons.contains(person));
+
+            if is_executable {
+                if let Some(persons) = map.get_mut(dept) {
+                    assert!(persons.remove(person));
+                    if persons.is_empty() {
+                        assert_ne!(map.remove(dept), None);
+                    }
+                }
+            }
+        } else if let Some(caps) = re_move.captures(command) {
+            let person = &caps["person"];
+            let from_dept = &caps["from_dept"];
+            let to_dept = &caps["to_dept"];
+
+            let is_executable = map.get(from_dept)
+                .map_or(false, |persons| persons.contains(person));
+
+            if is_executable {
+                if let Some(persons) = map.get_mut(from_dept) {
+                    assert!(persons.remove(person));
+                    if persons.is_empty() {
+                        assert_ne!(map.remove(from_dept), None);
+                    }
+                }
+                assert!(map.entry(to_dept.to_string()).or_default().insert(person.to_string()));
+            }
+        }
+    }
+
+    map
 }
 
 /// Events in a text editor.
@@ -130,5 +240,25 @@ pub enum TypeEvent {
 ///
 /// See the test function `test_editor` for examples.
 pub fn use_editor(events: Vec<TypeEvent>) -> String {
-    todo!()
+    let mut buf = String::new();
+    let mut cb = String::new();
+
+    for event in &events {
+        match event {
+            TypeEvent::Type(c) => {
+                buf.push(*c);
+            },
+            TypeEvent::Backspace => {
+                _ = buf.pop();
+            },
+            TypeEvent::Copy => {
+                cb = buf.clone();
+            },
+            TypeEvent::Paste => {
+                buf.push_str(&cb);
+            },
+        }
+    }
+
+    buf
 }
