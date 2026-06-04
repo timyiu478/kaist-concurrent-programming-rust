@@ -26,7 +26,10 @@ pub enum MyOption<T> {
 /// assert_eq!(my_map(MyOption::MyNone, len), MyOption::MyNone);
 /// ```
 pub fn my_map<T, U, F: FnOnce(T) -> U>(v: MyOption<T>, f: F) -> MyOption<U> {
-    todo!()
+    match v {
+        MyOption::MySome(val) => MyOption::MySome(f(val)),
+        MyOption::MyNone => MyOption::MyNone,
+    }
 }
 
 /// Returns `MyNone` if the option is `MyNone`, otherwise calls `f` with the wrapped value and
@@ -52,7 +55,10 @@ pub fn my_map<T, U, F: FnOnce(T) -> U>(v: MyOption<T>, f: F) -> MyOption<U> {
 /// assert_eq!(my_and_then(MyOption::MyNone, pos_then_to_string), MyOption::MyNone);
 /// ```
 pub fn my_and_then<T, U, F: FnOnce(T) -> MyOption<U>>(v: MyOption<T>, f: F) -> MyOption<U> {
-    todo!()
+    match v {
+        MyOption::MySome(val) => f(val),
+        MyOption::MyNone => MyOption::MyNone,
+    }
 }
 
 /// Custom operator: `option_op_or(v1, v2, f)`. If neither `v1` nor `v2` is `Some`, returns `None`.
@@ -76,5 +82,17 @@ pub fn my_option_op_or<T, F: FnOnce(T, T) -> T>(
     v2: MyOption<T>,
     f: F,
 ) -> MyOption<T> {
-    todo!()
+    match (v1, v2) {
+        // Case 1: Both are Some -> apply the function
+        (MyOption::MySome(val1), MyOption::MySome(val2)) => MyOption::MySome(f(val1, val2)),
+        
+        // Case 2: Only v1 is Some -> return v1's value
+        (MyOption::MySome(val1), MyOption::MyNone) => MyOption::MySome(val1),
+        
+        // Case 3: Only v2 is Some -> return v2's value
+        (MyOption::MyNone, MyOption::MySome(val2)) => MyOption::MySome(val2),
+        
+        // Case 4: Both are None -> return None
+        (MyOption::MyNone, MyOption::MyNone) => MyOption::MyNone,
+    }
 }
