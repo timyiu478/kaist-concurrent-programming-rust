@@ -27,5 +27,33 @@
 ///
 /// See `test_shell` for more examples.
 pub fn parse_shell_command(command: &str) -> Vec<String> {
-    todo!()
+    let mut vec: Vec<String> = Vec::new();
+    let mut word = String::new();
+    let mut single_quoted = false;
+
+    for c in command.chars() {
+        if c == '\'' {
+            // Toggle the quote state; do not push the quote itself into the word
+            single_quoted = !single_quoted;
+        } else if single_quoted {
+            // Inside quotes, keep everything (even spaces)
+            word.push(c);
+        } else if c == ' ' {
+            // Outside quotes, a space means we hit a delimiter
+            if !word.is_empty() {
+                vec.push(word.clone());
+                word.clear();
+            }
+        } else {
+            // Keep alphanumeric or any other valid non-space characters
+            word.push(c);
+        }
+    }
+
+    // Push the final word if the string didn't end with a space
+    if !word.is_empty() {
+        vec.push(word);
+    }
+
+    vec
 }
