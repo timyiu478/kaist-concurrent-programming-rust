@@ -64,3 +64,9 @@ while !*started {
 }
 println!("{}", s);
 ```
+
+Lock API:
+
+* Rust does not guarantee that unlock is only be called by the owner. Its the responsibility of the API user.
+* User should pass the token he obtain from the lock() when he calls unlock() as a proof of ownership
+
