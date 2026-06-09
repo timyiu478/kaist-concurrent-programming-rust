@@ -32,10 +32,10 @@ module TwoWaySort
     while i < j do
       invariant { 0 <= i /\ j < length a }
       invariant { forall i1: int. 0 <= i1 < i 
-        -> true (* TODO: Replace `true` with your solution *) }
+        -> a[i1] = False }
       invariant { forall i2: int. j < i2 < length a 
-        -> true (* TODO: Replace `true` with your solution *) }
-      invariant { true (* TODO: Replace `true` with your solution *) }
+        -> a[i2] = True }
+      invariant { permut_all (old a) a }
       variant { j - i }
       if not a[i] then
         incr i

@@ -16,3 +16,24 @@
 
 * [More on Why3](https://www.why3.org/doc/).
 * [Why3 standard library](https://www.why3.org/stdlib/).
+
+# Test Results
+
+```console
+❯ why3 prove -P alt-ergo max.mlw pascal.mlw binary_search.mlw
+File max.mlw:
+Goal max_idx'vc.
+Prover result is: Valid (0.11s, 68 steps).
+
+File pascal.mlw:
+Goal comb'vc.
+Prover result is: Valid (0.13s, 41 steps).
+
+File pascal.mlw:
+Goal chooses'vc.
+Prover result is: Valid (0.63s, 2098 steps).
+
+File binary_search.mlw:
+Goal binary_search'vc.
+Prover result is: Valid (0.22s, 368 steps).
+```

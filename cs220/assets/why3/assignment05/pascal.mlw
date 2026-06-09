@@ -33,7 +33,7 @@ module Pascal
       for c = 1 to r-1 do
         (* IMPORTANT: DON'T MODIFY THE ABOVE LINES *)
         (* TODO: Replace `true` with your solution. Your solution MUST be a single line, at line 36. DON'T add more code above or below. *)
-        invariant { true  }
+        invariant { (forall i: int. 0 <= i < c -> new_row[i] = comb r i) /\ (forall j: int. c <= j <= r -> new_row[j] = 1) }
         (* IMPORTANT: DON'T MODIFY THE BELOW LINES *)
         new_row[c] <- row[c-1] + row[c]
       done;

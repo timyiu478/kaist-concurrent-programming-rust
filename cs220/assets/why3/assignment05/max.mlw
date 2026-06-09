@@ -28,7 +28,7 @@ module Max
       invariant { 0 <= max_idx <= n-1 }
       (* IMPORTANT: DON'T MODIFY THE ABOVE LINES *)
       (* TODO: Replace `true` with your solution. Your solution MUST be a single line, at line 31. DON'T add more code above or below. *)
-      invariant { true }
+      invariant { forall j. 0 <= j < i -> a[j] <= a[max_idx] }
       (* IMPORTANT: DON'T MODIFY THE BELOW LINES *)
       if a[max_idx] < a[i] then max_idx <- i;
     done;

@@ -19,7 +19,7 @@ module Division
     let ref q = 0 in
     let ref r = a in
     while r >= b do
-      invariant { true (* TODO: Replace `true` with your solution *) } 
+      invariant { a = b * q + r /\ r >= 0 } 
       variant { r }
       q <- q + 1;
       r <- r - b
