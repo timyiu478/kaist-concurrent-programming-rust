@@ -27,7 +27,29 @@ impl Context {
 
     /// Calculates the given expression. (We assume the absence of overflow.)
     pub fn calc_expression(&self, expression: &Expression) -> Result<f64> {
-        todo!("fill here")
+        match expression {
+            Expression::Num(n) => Ok(*n),
+            Expression::Variable(v) => self.variables
+            .get(v)
+            .copied() // Converts Option<&f64> to Option<f64>
+            .ok_or_else(|| anyhow::anyhow!("Undefined variable: {}", v)),
+            Expression::BinOp { op, lhs, rhs } => {
+                let left = self.calc_expression(lhs)?;
+                let right = self.calc_expression(rhs)?;
+                match op {
+                    BinOp::Add => Ok(left + right),
+                    BinOp::Subtract => Ok(left - right),
+                    BinOp::Multiply => Ok(left * right),
+                    BinOp::Divide => {
+                        if right == 0.0 {
+                            bail!("Division by zero error!");
+                        }
+                        Ok(left / right)
+                    },
+                    BinOp::Power => Ok(left.powf(right)),
+                }
+            }
+        }
     }
 
     /// Calculates the given command. (We assume the absence of overflow.)
@@ -43,6 +65,18 @@ impl Context {
     ///
     /// After calculating commad `3 ^ 2` => Context's variables = `{($0,8),(v,1),($1,9)}`
     pub fn calc_command(&mut self, command: &Command) -> Result<(String, f64)> {
-        todo!("fill here")
+        let val = self.calc_expression(&command.expression)?;
+        match &command.variable {
+            Some(var_name) => {
+                _ = self.variables.insert(var_name.clone(), val);
+                Ok((var_name.clone(), val))
+            },
+            None => {
+                let var_name = format!("${}", self.anonymous_counter);
+                self.anonymous_counter += 1;
+                _ = self.variables.insert(var_name.clone(), val);
+                Ok((var_name, val))
+            }
+        }
     }
 }
