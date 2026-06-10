@@ -33,55 +33,55 @@ pub fn from_usize<T: Semiring>(value: usize) -> T {
 
 impl Semiring for u64 {
     fn zero() -> Self {
-        todo!()
+        0
     }
 
     fn one() -> Self {
-        todo!()
+        1
     }
 
     fn add(&self, rhs: &Self) -> Self {
-        todo!()
+        *self + *rhs
     }
 
     fn mul(&self, rhs: &Self) -> Self {
-        todo!()
+        *self * *rhs
     }
 }
 
 impl Semiring for i64 {
     fn zero() -> Self {
-        todo!()
+        0
     }
 
     fn one() -> Self {
-        todo!()
+        1
     }
 
     fn add(&self, rhs: &Self) -> Self {
-        todo!()
+        *self + *rhs
     }
 
     fn mul(&self, rhs: &Self) -> Self {
-        todo!()
+        *self * *rhs
     }
 }
 
 impl Semiring for f64 {
     fn zero() -> Self {
-        todo!()
+        0.0
     }
 
     fn one() -> Self {
-        todo!()
+        1.0
     }
 
     fn add(&self, rhs: &Self) -> Self {
-        todo!()
+        *self + *rhs
     }
 
     fn mul(&self, rhs: &Self) -> Self {
-        todo!()
+        *self * *rhs
     }
 }
 
@@ -105,42 +105,97 @@ pub struct Polynomial<C: Semiring> {
 
 impl<C: Semiring> Semiring for Polynomial<C> {
     fn zero() -> Self {
-        todo!()
+        Polynomial {
+            coefficients: HashMap::new(),
+        }
     }
 
     fn one() -> Self {
-        todo!()
+        Polynomial {
+            coefficients: HashMap::from([(0, C::one())]),
+        }
     }
 
     fn add(&self, rhs: &Self) -> Self {
-        todo!()
+        let mut result_coefficients = self.coefficients.clone();
+
+        for (power, rhs_coeff) in &rhs.coefficients {
+            let zero_coeff = C::zero();
+            let lhs_coeff = result_coefficients.get(power).unwrap_or(&zero_coeff);
+            let new_coeff = lhs_coeff.add(rhs_coeff);
+            if new_coeff == C::zero() {
+                drop(result_coefficients.remove(power));
+            } else {
+                drop(result_coefficients.insert(*power, new_coeff));
+            }
+        }
+
+        Polynomial {
+            coefficients: result_coefficients,
+        }
     }
 
     fn mul(&self, rhs: &Self) -> Self {
-        todo!()
+        let mut result_coefficients = HashMap::new();
+
+        for (power1, coeff1) in &self.coefficients {
+            for (power2, coeff2) in &rhs.coefficients {
+                let new_power = power1 + power2;
+                let new_coeff = coeff1.mul(coeff2);
+
+                let zero_coeff = C::zero();
+                let current_coeff = result_coefficients.get(&new_power).unwrap_or(&zero_coeff);
+                let accumulated_coeff = current_coeff.add(&new_coeff);
+
+                if accumulated_coeff == C::zero() {
+                    drop(result_coefficients.remove(&new_power));
+                } else {
+                    drop(result_coefficients.insert(new_power, accumulated_coeff));
+                }
+            }
+        }
+
+        Polynomial {
+            coefficients: result_coefficients,
+        }
     }
 }
 
 impl<C: Semiring> Polynomial<C> {
     /// Constructs polynomial `x`.
     pub fn x() -> Self {
-        todo!()
+        Polynomial {
+            coefficients: HashMap::from([(1, C::one())]),
+        }
     }
 
     /// Evaluates the polynomial with the given value.
     pub fn eval(&self, value: C) -> C {
-        todo!()
+        let mut total = C::zero();
+        for (power, coeff) in &self.coefficients {
+            let mut x_to_n = C::one();
+            for _ in 0..*power {
+                x_to_n = x_to_n.mul(&value);
+            }
+            let term_val = x_to_n.mul(coeff);
+            total = total.add(&term_val);
+        }
+        total
     }
 
     /// Constructs polynomial `ax^n`.
     pub fn term(a: C, n: u64) -> Self {
-        todo!()
+        Polynomial {
+            coefficients: HashMap::from([(n, a)]),
+        }
     }
 }
 
 impl<C: Semiring> From<C> for Polynomial<C> {
     fn from(value: C) -> Self {
-        todo!()
+        Polynomial {
+            coefficients: HashMap::from([(0, value)]),
+        }
     }
 }
 
@@ -164,6 +219,34 @@ impl<C: Semiring> std::str::FromStr for Polynomial<C> {
     type Err = (); // Ignore this for now...
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        let terms = s.split(" + ");
+
+        let mut p = Polynomial::zero();
+
+        for term in terms {
+            if let Some((left, right)) = term.split_once('^') {
+                let n: u64 = right.parse().unwrap();
+                if left == "x" { // x^n
+                    p = p.add(&Polynomial::term(C::one(), n));
+                } else { // ax^n
+                    let a_str = left.strip_suffix('x').unwrap();
+                    let a: usize = a_str.parse().unwrap();
+                    p = p.add(&Polynomial::term(from_usize(a), n));
+                }
+            } else if term.contains('x') {
+                if term == "x" { // x
+                    p = p.add(&Polynomial::term(C::one(), 1));
+                } else { // ax
+                    let a_str = term.strip_suffix('x').unwrap();
+                    let a: usize = a_str.parse().unwrap();
+                    p = p.add(&Polynomial::term(from_usize(a), 1));
+                }
+            } else { // a
+                let a: usize = term.parse().unwrap();
+                p = p.add(&Polynomial::term(from_usize(a), 0));
+            }
+        }
+
+        Ok(p)
     }
 }
