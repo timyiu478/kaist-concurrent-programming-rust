@@ -28,6 +28,16 @@ pub const ONE: Rational = Rational::new(1, 1);
 /// Minus one
 pub const MINUS_ONE: Rational = Rational::new(-1, 1);
 
+// Standard Euclidean GCD algorithm for isize
+fn gcd(mut a: isize, mut b: isize) -> isize {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
 impl Rational {
     /// Creates a new rational number.
     pub const fn new(numerator: isize, denominator: isize) -> Self {
@@ -36,13 +46,45 @@ impl Rational {
             denominator,
         }
     }
+
+    /// Normalizes the fraction according to the rules:
+    /// 1. If numerator is 0, return Rational { 0, 0 }
+    /// 2. Denominator must be nonnegative
+    /// 3. Numerator and denominator must be coprime
+    fn normalize(mut num: isize, mut den: isize) -> Self {
+        // Rule 1: Zero corner case
+        if num == 0 {
+            return Rational { numerator: 0, denominator: 0 };
+        }
+
+        // Rule 2: Fix sign so denominator is always positive
+        if den < 0 {
+            num = -num;
+            den = -den;
+        }
+
+        // Rule 3: Reduce using GCD
+        let common = gcd(num.abs(), den.abs());
+        
+        Rational {
+            numerator: num / common,
+            denominator: den / common,
+        }
+    }
 }
 
 impl Add for Rational {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        todo!()
+        if self.denominator == 0 {
+            return rhs
+        } else if rhs.denominator == 0 {
+            return self
+        }
+        let num = self.numerator * rhs.denominator + rhs.numerator * self.denominator;
+        let den = self.denominator * rhs.denominator;
+        Rational::normalize(num, den)
     }
 }
 
@@ -50,7 +92,12 @@ impl Mul for Rational {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        todo!()
+        if self.denominator == 0 || rhs.denominator == 0 {
+            return ZERO;
+        }
+        let num = self.numerator * rhs.numerator;
+        let den = self.denominator * rhs.denominator;
+        Rational::normalize(num, den)
     }
 }
 
@@ -58,7 +105,14 @@ impl Sub for Rational {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        todo!()
+        if self.denominator == 0 {
+            return Rational::normalize(-rhs.numerator, rhs.denominator);
+        } else if rhs.denominator == 0 {
+            return self;
+        }
+        let num = self.numerator * rhs.denominator - rhs.numerator * self.denominator;
+        let den = self.denominator * rhs.denominator;
+        Rational::normalize(num, den)
     }
 }
 
@@ -66,7 +120,13 @@ impl Div for Rational {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        todo!()
+        if self.denominator == 0 || rhs.denominator == 0 {
+            return ZERO;
+        }
+        // To divide, multiply by the reciprocal (flip rhs numerator and denominator)
+        let num = self.numerator * rhs.denominator;
+        let den = self.denominator * rhs.numerator;
+        Rational::normalize(num, den)
     }
 }
 
@@ -84,7 +144,7 @@ pub trait Differentiable: Clone {
 impl Differentiable for Rational {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Constant_term_rule>
     fn diff(&self) -> Self {
-        todo!()
+        ZERO
     }
 }
 
@@ -108,19 +168,39 @@ pub enum SingletonPolynomial {
 impl SingletonPolynomial {
     /// Creates a new const polynomial.
     pub fn new_c(r: Rational) -> Self {
-        todo!()
+        SingletonPolynomial::Const(r)
     }
 
     /// Creates a new polynomial.
     pub fn new_poly(coeff: Rational, power: Rational) -> Self {
-        todo!()
+        SingletonPolynomial::Polynomial {coeff, power}
     }
 }
 
 impl Differentiable for SingletonPolynomial {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Power_rule>
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            SingletonPolynomial::Const(r) => SingletonPolynomial::Const(ZERO),
+            SingletonPolynomial::Polynomial {coeff, power} => {
+                // 1. "Drop it down": Multiply coeff by power
+                let new_coeff = *coeff * *power;
+                
+                // 2. "Subtract one": We need a Rational representing the number 1
+                let one = Rational { numerator: 1, denominator: 1 };
+                let new_power = *power - one;
+                
+                // 3. Check our invariants: If the new power hit zero, it becomes a Const
+                if new_power.numerator == 0 {
+                    SingletonPolynomial::Const(new_coeff)
+                } else {
+                    SingletonPolynomial::Polynomial {
+                        coeff: new_coeff,
+                        power: new_power,
+                    }
+                }
+            },
+        }
     }
 }
 
@@ -131,7 +211,7 @@ pub struct Exp;
 impl Exp {
     /// Creates a new exponential function.
     pub fn new() -> Self {
-        todo!()
+        Exp{}
     }
 }
 
@@ -144,7 +224,7 @@ impl Default for Exp {
 impl Differentiable for Exp {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Derivatives_of_exponential_and_logarithmic_functions>
     fn diff(&self) -> Self {
-        todo!()
+        *self
     }
 }
 
@@ -168,19 +248,22 @@ pub enum Trignometric {
 impl Trignometric {
     /// Creates a new sine function.
     pub fn new_sine(coeff: Rational) -> Self {
-        todo!()
+        Trignometric::Sine {coeff}
     }
 
     /// Creates a new cosine function.
     pub fn new_cosine(coeff: Rational) -> Self {
-        todo!()
+        Trignometric::Cosine {coeff}
     }
 }
 
 impl Differentiable for Trignometric {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Derivatives_of_trigonometric_functions>
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            Trignometric::Sine {coeff} => Trignometric::new_cosine(*coeff),
+            Trignometric::Cosine {coeff} => Trignometric::new_sine(ZERO-*coeff),
+        }
     }
 }
 
@@ -199,7 +282,12 @@ pub enum BaseFuncs {
 
 impl Differentiable for BaseFuncs {
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            BaseFuncs::Const(c) => BaseFuncs::Const(c.diff()),
+            BaseFuncs::Poly(p)  => BaseFuncs::Poly(p.diff()),
+            BaseFuncs::Exp(e)   => BaseFuncs::Exp(e.diff()),
+            BaseFuncs::Trig(t)  => BaseFuncs::Trig(t.diff()),
+        }
     }
 }
 
@@ -222,14 +310,39 @@ pub enum ComplexFuncs<F> {
 
 impl<F: Differentiable> Differentiable for Box<F> {
     fn diff(&self) -> Self {
-        todo!()
+        Box::new(self.as_ref().diff())
     }
 }
 
 impl<F: Differentiable> Differentiable for ComplexFuncs<F> {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Elementary_rules_of_differentiation>
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            ComplexFuncs::Func(f) => ComplexFuncs::Func(f.diff()),
+            ComplexFuncs::Add(f, g) => {
+                ComplexFuncs::Add(f.diff(), g.diff())
+            },
+            ComplexFuncs::Sub(f, g) => {
+                ComplexFuncs::Sub(f.diff(), g.diff())
+            },
+            ComplexFuncs::Mul(f, g) => {
+                let left_side = ComplexFuncs::Mul(f.diff(), g.clone());
+                let right_side = ComplexFuncs::Mul(f.clone(), g.diff());
+                ComplexFuncs::Add(Box::new(left_side), Box::new(right_side))
+            },
+            ComplexFuncs::Div(f, g) => {
+                let top_left = ComplexFuncs::Mul(f.diff(), g.clone());
+                let top_right = ComplexFuncs::Mul(f.clone(), g.diff());
+                let numerator = ComplexFuncs::Sub(Box::new(top_left), Box::new(top_right));
+                let denominator = ComplexFuncs::Mul(g.clone(), g.clone());
+                ComplexFuncs::Div(Box::new(numerator), Box::new(denominator))
+            },
+            ComplexFuncs::Comp(f, g) => {
+                let outer_diff = ComplexFuncs::Comp(f.diff(), g.clone());
+                let inner_diff = g.diff();
+                ComplexFuncs::Mul(Box::new(outer_diff), inner_diff)
+            },
+        }
     }
 }
 
@@ -241,37 +354,62 @@ pub trait Evaluate {
 
 impl Evaluate for Rational {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        (self.numerator as f64) / (self.denominator as f64)
     }
 }
 
 impl Evaluate for SingletonPolynomial {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            SingletonPolynomial::Const(r) => r.evaluate(x),
+            SingletonPolynomial::Polynomial {coeff, power} => {
+                let x_to_n = x.powf(power.evaluate(x));
+                coeff.evaluate(x) * x_to_n
+            }
+        }
     }
 }
 
 impl Evaluate for Exp {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        x.exp()
     }
 }
 
 impl Evaluate for Trignometric {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            Trignometric::Sine{coeff} => coeff.evaluate(x) * x.sin(),
+            Trignometric::Cosine{coeff} => coeff.evaluate(x) * x.cos(),
+        }
     }
 }
 
 impl Evaluate for BaseFuncs {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            BaseFuncs::Const(r) => r.evaluate(x),
+            BaseFuncs::Poly(p) => p.evaluate(x),
+            BaseFuncs::Exp(e) => e.evaluate(x),
+            BaseFuncs::Trig(t) => t.evaluate(x),
+        }
     }
 }
 
 impl<F: Evaluate> Evaluate for ComplexFuncs<F> {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            ComplexFuncs::Func(f) => f.evaluate(x),
+            ComplexFuncs::Add(f, g) => {
+                f.evaluate(x) + g.evaluate(x)
+            },
+            ComplexFuncs::Sub(f, g) => {
+                f.evaluate(x) - g.evaluate(x)
+            },
+            ComplexFuncs::Mul(f, g) => f.evaluate(x) * g.evaluate(x),
+            ComplexFuncs::Div(f, g) => f.evaluate(x) / g.evaluate(x),
+            ComplexFuncs::Comp(f, g) => f.evaluate(g.evaluate(x)),
+        }
     }
 }
 
