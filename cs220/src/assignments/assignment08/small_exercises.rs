@@ -7,8 +7,17 @@
 ///
 /// Refer `test_repeat` in `assignment08_grade.rs` for detailed examples.
 pub fn repeat<T, F: FnMut(T) -> T>(n: usize, mut f: F) -> impl FnMut(T) -> T {
-    todo!();
-    f // This line has been added to prevent compile error. You can erase this line.
+    // move is needed because the function captures n and f
+    // they are stored in the stack of repeat function call
+    // if the closure gets the references of them, the references will be invalid
+    // after the repeat function returns
+    move |x| {
+        let mut v = x;
+        for _ in 0..n {
+            v = f(v);
+        }
+        v
+    }
 }
 
 /// Funny Map
@@ -20,7 +29,16 @@ pub fn repeat<T, F: FnMut(T) -> T>(n: usize, mut f: F) -> impl FnMut(T) -> T {
 ///
 /// Refer `test_funny_map` in `assignment08_grade.rs` for detailed examples.
 pub fn funny_map<T, F: Fn(T) -> T>(f: F, vs: Vec<T>) -> Vec<T> {
-    todo!()
+    let mut new_vs: Vec<T> = Vec::new();
+
+    for (i, mut v) in vs.into_iter().enumerate() {
+        for _ in 0..i {
+            v = f(v);
+        }
+        new_vs.push(v);
+    }
+
+    new_vs
 }
 
 /// Count Repeat
@@ -33,7 +51,43 @@ pub fn count_repeat<T, F: Fn(T) -> T>(f: F, x: T) -> usize
 where
     T: PartialEq + Copy,
 {
-    todo!()
+    // 
+    // 99 ──> 1 ──> 2 ──> 3 ──> 4 ──> 5
+    //        |                 |
+    //        ------------------
+    // Tail: 99
+    // Loop: 1 2 3 4
+    // Start of the loop: 1
+
+    // Phase 1: Find a meeting point inside the loop
+    let mut slow = f(x);
+    let mut fast = f(f(x));
+
+    while slow != fast {
+        slow = f(slow);
+        fast = f(f(fast));
+    }
+
+    // Phase 2: Find the length of the tail
+    let mut tail_steps = 0;
+    let mut ptr1 = x;
+    let mut ptr2 = slow;
+    while ptr1 != ptr2 {
+        ptr1 = f(ptr1);
+        ptr2 = f(ptr2);
+        tail_steps += 1;
+    }
+
+    // Phase 3: Find the length of the loop
+    let mut loop_steps = 1;
+    slow = f(ptr1); // ptr1 is now exactly at the start of the loop
+    while slow != ptr1 {
+        slow = f(slow);
+        loop_steps += 1;
+    }
+
+    // Total steps from start until a repeat is encountered is Tail + Loop
+    tail_steps + loop_steps
 }
 
 /// Either `T1`, or `T2`.
@@ -64,6 +118,9 @@ impl<T1, T2> Either2<T1, T2> {
         F1: FnOnce(T1) -> U1,
         F2: FnOnce(T2) -> U2,
     {
-        todo!()
+        match self {
+            Either2::Case1 { inner } => Either2::Case1 { inner: f1(inner) },
+            Either2::Case2 { inner } => Either2::Case2 { inner: f2(inner) },
+        }
     }
 }
