@@ -39,10 +39,10 @@ impl<T: Eq + Hash + Clone, I1: Iterator<Item = T>, I2: Iterator<Item = T>> Itera
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(item) = self.it1.next() {
+        if let Some(item) = self.it1.next() {
             return Some(item);
         }
-        while let Some(item) = self.it2.next() {
+        if let Some(item) = self.it2.next() {
             return Some(item);
         }
         None
@@ -60,7 +60,7 @@ impl<I: Iterator> Iterator for Enumerate<I> {
     type Item = (usize, I::Item);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(item) = self.it.next() {
+        if let Some(item) = self.it.next() {
             self.idx += 1;
             return Some((self.idx-1, item));
         }

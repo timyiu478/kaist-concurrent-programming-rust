@@ -148,7 +148,7 @@ impl Iterator for Divisors {
     fn next(&mut self) -> Option<Self::Item> {
         while self.x < self.sqrt_n {
             self.x += 1;
-            if self.n % self.x == 0 {
+            if self.n.is_multiple_of(self.x) {
                 let n_div_x = self.n/self.x;
                 if self.x != n_div_x {
                     self.divisors.push(n_div_x);
@@ -163,7 +163,7 @@ impl Iterator for Divisors {
 /// Returns an iterator over the divisors of n.
 pub fn divisors(n: u64) -> impl Iterator<Item = u64> {
     Divisors {
-        n: n,
+        n,
         sqrt_n: (n as f64).sqrt() as u64,
         x: 0,
         divisors: Vec::new(),

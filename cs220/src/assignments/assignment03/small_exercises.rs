@@ -59,7 +59,7 @@ pub fn next_weekday(day: DayOfWeek) -> DayOfWeek {
 ///
 /// Returns `None` if the list is empty.
 pub fn median(values: Vec<isize>) -> Option<isize> {
-    if values.len() == 0 {
+    if values.is_empty() {
         return None
     }
 
@@ -67,11 +67,11 @@ pub fn median(values: Vec<isize>) -> Option<isize> {
 
     v.sort();
 
-    if v.len() % 2 == 0 {
+    if v.len().is_multiple_of(2) {
         return Some(v[v.len()/2]);
     }
 
-    Some(v[(v.len()+1)/2-1])
+    Some(v[v.len().div_ceil(2)-1])
 }
 
 /// Given a list of integers, returns its smallest mode (the value that occurs most often; a hash
@@ -79,7 +79,7 @@ pub fn median(values: Vec<isize>) -> Option<isize> {
 ///
 /// Returns `None` if the list is empty.
 pub fn mode(values: Vec<isize>) -> Option<isize> {
-    if values.len() == 0 {
+    if values.is_empty() {
         return None;
     }
 
@@ -125,7 +125,7 @@ pub fn mode(values: Vec<isize>) -> Option<isize> {
 pub fn piglatin(input: String) -> String {
     let vowel: HashSet<char> = ['a', 'e', 'i', 'o', 'u'].into_iter().collect();
 
-    if let Some(first_chr) = input.chars().nth(0) {
+    if let Some(first_chr) = input.chars().next() {
         // Case 3: a word starts with a vowel
         if vowel.contains(&first_chr) {
             let mut output = input.clone();
@@ -135,7 +135,7 @@ pub fn piglatin(input: String) -> String {
             // Case 1/2. a word starts with multiple consonants
             let first_vowel_pos = input
                 .char_indices()
-                .find(|(_, c)| vowel.contains(&c))
+                .find(|(_, c)| vowel.contains(c))
                 .map(|(index, _)| index);
             if let Some(index) = first_vowel_pos {
                 let (before, after) = input.split_at(index);
@@ -189,23 +189,22 @@ pub fn organize(commands: Vec<String>) -> HashMap<String, HashSet<String>> {
             let dept = &caps["dept"];
 
             let is_executable = map.get(dept)
-                .map_or(false, |persons| persons.contains(person));
+                .is_some_and(|persons| persons.contains(person));
 
-            if is_executable {
-                if let Some(persons) = map.get_mut(dept) {
+            if is_executable
+                && let Some(persons) = map.get_mut(dept) {
                     assert!(persons.remove(person));
                     if persons.is_empty() {
                         assert_ne!(map.remove(dept), None);
                     }
                 }
-            }
         } else if let Some(caps) = re_move.captures(command) {
             let person = &caps["person"];
             let from_dept = &caps["from_dept"];
             let to_dept = &caps["to_dept"];
 
             let is_executable = map.get(from_dept)
-                .map_or(false, |persons| persons.contains(person));
+                .is_some_and(|persons| persons.contains(person));
 
             if is_executable {
                 if let Some(persons) = map.get_mut(from_dept) {

@@ -58,7 +58,7 @@ pub fn chooses(n: u64) -> Vec<u64> {
     for i in 1..=n as usize {
         // Compute elements backwards to update the vector in place safely
         for j in (1..i).rev() {
-            row[j] = row[j - 1] + row[j];
+            row[j] += row[j - 1];
         }
     }
     row
