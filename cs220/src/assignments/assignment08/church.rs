@@ -35,17 +35,40 @@ pub fn zero<T: 'static>() -> Church<T> {
 
 /// Implement a function to add 1 to a given Church numeral.
 pub fn succ<T: 'static>(n: Church<T>) -> Church<T> {
-    todo!()
+    Rc::new(move |f| { 
+        // Why Rc::clone? the outer closure can keep its own copy of 'n' for future calls
+        let n_cloned = Rc::clone(&n);
+        let n_times = n_cloned(Rc::clone(&f));
+        Rc::new(move |x| {
+            n_times(f(x))
+        })
+    })
 }
 
 /// Implement a function to add two Church numerals.
 pub fn add<T: 'static>(n: Church<T>, m: Church<T>) -> Church<T> {
-    todo!()
+    Rc::new(move |f| { 
+        let n_cloned = Rc::clone(&n);
+        let m_cloned = Rc::clone(&m);
+        let n_times = n_cloned(Rc::clone(&f));
+        let m_times = m_cloned(Rc::clone(&f));
+        Rc::new(move |x| {
+            n_times(m_times(x))
+        })
+    })
 }
 
 /// Implement a function to multiply (mult) two Church numerals.
 pub fn mult<T: 'static>(n: Church<T>, m: Church<T>) -> Church<T> {
-    todo!()
+    Rc::new(move |f| { 
+        let n_cloned = Rc::clone(&n);
+        let m_cloned = Rc::clone(&m);
+        let n_times = n_cloned(Rc::clone(&f));
+        let mn_times = m_cloned(n_times);
+        Rc::new(move |x| {
+            mn_times(x)
+        })
+    })
 }
 
 /// Implement a function to raise one Church numeral to the power of another.
@@ -57,17 +80,40 @@ pub fn mult<T: 'static>(n: Church<T>, m: Church<T>) -> Church<T> {
 /// `pow`-like method.
 pub fn exp<T: 'static>(n: usize, m: usize) -> Church<T> {
     // ACTION ITEM: Uncomment the following lines and replace `todo!()` with your code.
-    // let n = from_usize(n);
-    // let m = from_usize(m);
-    todo!()
+    let n = from_usize(n);
+    let m = from_usize(m);
+
+    m(n)
 }
 
 /// Implement a function to convert a Church numeral to a usize type.
 pub fn to_usize<T: 'static + Default>(n: Church<T>) -> usize {
-    todo!()
+    // 1. Wrap the RefCell inside an Rc so we can share it
+    let count = Rc::new(RefCell::new(0));
+    
+    // 2. Clone the Rc pointer for the closure to move inside
+    let count_cloned = Rc::clone(&count);
+    let f = Rc::new(move |x: T| {
+        *count_cloned.borrow_mut() += 1;
+        x
+    });
+    
+    let n_times = n(f);
+    drop((*n_times)(T::default()));
+
+    // 3. Look inside our original Rc pointer to see the final tally!
+    *count.borrow()
 }
 
 /// Implement a function to convert a usize type to a Church numeral.
 pub fn from_usize<T: 'static>(n: usize) -> Church<T> {
-    todo!()
+    Rc::new(move |f| { 
+        Rc::new(move |x| {
+           let mut v = x;
+           for _ in 0..n {
+               v = Rc::clone(&f)(v);
+           }
+           v
+        })
+    })
 }
