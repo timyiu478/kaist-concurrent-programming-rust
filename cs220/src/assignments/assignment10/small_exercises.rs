@@ -4,6 +4,9 @@ use std::collections::HashSet;
 
 use itertools::*;
 
+use std::collections::BinaryHeap;
+use std::cmp::Ordering;
+
 /// Returns the pairs of `(i, j)` where `i < j` and `inner[i] > inner[j]` in increasing order.
 ///
 /// For example, the inversions of `[3, 5, 1, 2, 4]` is `[(0, 2), (0, 3), (1, 2), (1, 3), (1, 4)]`
@@ -17,7 +20,22 @@ use itertools::*;
 ///
 /// Consult <https://en.wikipedia.org/wiki/Inversion_(discrete_mathematics)> for more details of inversion.
 pub fn inversion<T: Ord>(inner: Vec<T>) -> Vec<(usize, usize)> {
-    todo!()
+    inner
+        .iter()
+        .enumerate()
+        // Generate pairs for each element i with all subsequent elements j
+        .flat_map(|(i, v1)| {
+            inner[i + 1..]
+                .iter()
+                .enumerate()
+                // Shift j's index to be relative to the start of the whole vector
+                .map(move |(j, v2)| (i, j + i + 1, v1, v2))
+        })
+        // Filter only those pairs that satisfy the inversion condition
+        .filter(|(_, _, v1, v2)| v1 > v2)
+        // Map back to just the indices
+        .map(|(i, j, _, _)| (i, j))
+        .collect()
 }
 
 /// Represents a node of tree data structure.
@@ -33,6 +51,30 @@ pub enum Node<T> {
     ///
     /// It contains the name of node.
     Leaf(T),
+}
+
+struct PreOrderIterator<T> {
+    stack: Vec<Node<T>>
+}
+
+impl<T> Iterator for PreOrderIterator<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_node = self.stack.pop()?;
+
+        match current_node {
+            Node::NonLeaf((name, childs)) => {
+                for child in childs.into_iter().rev() {
+                    self.stack.push(child);
+                }
+                Some(name)
+            },
+            Node::Leaf(name) => {
+                Some(name)
+            }
+        }
+    }
 }
 
 /// Traverses the tree in preorder.
@@ -68,7 +110,9 @@ pub enum Node<T> {
 ///
 /// is `1 -> 2 -> 5 -> 6 -> 3 -> 4 -> 7 -> 8 -> 9`.
 pub fn traverse_preorder<T>(root: Node<T>) -> Vec<T> {
-    todo!()
+    // Trade-off: the original tree will be destroyed
+    let it = PreOrderIterator { stack: vec![root], };
+    it.collect()
 }
 
 /// File
@@ -114,8 +158,30 @@ pub enum File {
 /// Output: `[("a1", 1), ("a2", 3), ("b1", 3), ("a", 4), ("c", 8), ("b2", 15), ("b", 18), ("root",
 /// 30)]`
 pub fn du_sort(root: &File) -> Vec<(&str, usize)> {
-    todo!()
+    let mut results: Vec<(&str, usize)> = Vec::new();
+
+    let _ = calc_file_size(root, &mut results);
+
+    results.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(b.0)));
+
+    results
 }
+
+fn calc_file_size<'a>(file: &'a File, results: &mut Vec<(&'a str, usize)>) -> usize {
+    match file {
+        File::Data(name, size) => {
+            results.push((&name, *size));
+            *size
+        },
+        File::Directory(name, childrens) => {
+            let total_size = childrens.iter().map(|child| calc_file_size(child, results)).sum();
+            results.push((&name, total_size));
+            total_size
+        }
+    }
+}
+
+
 
 /// Remove all even numbers inside a vector using the given mutable reference.
 /// That is, you must modify the vector using the given mutable reference instead
@@ -129,7 +195,7 @@ pub fn du_sort(root: &File) -> Vec<(&str, usize)> {
 /// ```
 #[allow(clippy::ptr_arg)]
 pub fn remove_even(inner: &mut Vec<i64>) {
-    todo!()
+    inner.retain(|&x| x % 2 == 1);
 }
 
 /// Remove all duplicate occurences of a number inside the array.
@@ -146,7 +212,8 @@ pub fn remove_even(inner: &mut Vec<i64>) {
 /// ```
 #[allow(clippy::ptr_arg)]
 pub fn remove_duplicate(inner: &mut Vec<i64>) {
-    todo!()
+    let mut seen: HashSet<i64> = HashSet::new();
+    inner.retain(|&x| seen.insert(x));
 }
 
 /// Returns the natural join of two tables using the first column as the join argument.
@@ -172,15 +239,60 @@ pub fn remove_duplicate(inner: &mut Vec<i64>) {
 ///  20231234 |    Mike   |     ME
 /// ```
 pub fn natural_join(table1: Vec<Vec<String>>, table2: Vec<Vec<String>>) -> Vec<Vec<String>> {
-    todo!()
+    table1
+        .iter()
+        .flat_map(|v1| {
+            table2
+                .iter()
+                .map(|v2| (v1[0].clone(), v2[0].clone(), v1[1].clone(), v2[1].clone()))
+        })
+        .filter(|(id1, id2, _, _)| id1 == id2)
+        .map(|(_, id, name, dept)| Vec::from([id, name, dept]))
+        .collect()
+}
+
+#[derive(Eq, PartialEq)]
+struct HeapNode {
+    c: u64,
+    m: u64, // The critical tie-breaker tracking chronological discovery
+    triple: (u64, u64, u64),
+}
+
+impl Ord for HeapNode {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.c.cmp(&self.c)
+            .then_with(|| other.triple.0.cmp(&self.triple.0))
+    }
+}
+
+
+impl PartialOrd for HeapNode {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn gcd(mut a: u64, mut b: u64) -> u64 {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
 }
 
 /// You can freely add more fields.
-struct Pythagorean;
+struct Pythagorean {
+    m: u64,
+    heap: BinaryHeap<HeapNode>,
+}
 
 impl Pythagorean {
     fn new() -> Self {
-        todo!()
+        Pythagorean {
+            m: 2,
+            heap: BinaryHeap::new(),
+        }
     }
 }
 
@@ -188,7 +300,28 @@ impl Iterator for Pythagorean {
     type Item = (u64, u64, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        loop {
+            if let Some(node) = self.heap.peek() {
+                if node.c < self.m * self.m + 1 {
+                    return self.heap.pop().map(|n| n.triple);
+                }
+            }
+
+            let current_m = self.m;
+            for n in (1..current_m).filter(|&n| (current_m - n) % 2 == 1 && gcd(current_m, n) == 1) {
+                let a = current_m * current_m - n * n;
+                let b = 2 * current_m * n;
+                let c = current_m * current_m + n * n;
+                
+                self.heap.push(HeapNode {
+                    c,
+                    m: current_m,
+                    triple: (u64::min(a, b), u64::max(a, b), c),
+                });
+            }
+
+            self.m += 1;
+        }
     }
 }
 
