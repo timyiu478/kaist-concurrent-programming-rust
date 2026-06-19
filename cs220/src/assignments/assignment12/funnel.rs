@@ -19,5 +19,32 @@ where
     T: Send + 'static,
     F: Send + Sync + Fn(&T) -> bool + 'static,
 {
-    todo!()
+    thread::spawn(move || { 
+        let mut handles: Vec<JoinHandle<()>> = Vec::new();
+        let filter = Arc::new(f);
+
+        for rx in rxs {
+            let tx_clone = tx.clone();
+            let filter_clone = Arc::clone(&filter);
+
+            let handle = thread::spawn(move || { 
+                while let Ok(v) = rx.recv() {
+                    if filter_clone(&v) {
+                        let r = tx_clone.send(v);
+                        if r.is_err() {
+                            break;
+                        }
+                    }
+                }
+            });
+
+            handles.push(handle);
+        }
+
+        drop(tx);
+
+        for h in handles {
+            h.join().unwrap();
+        }
+    })
 }
