@@ -168,6 +168,10 @@ impl SubGraph {
     }
 
     fn dfs(&self, current : NodeHandle, visit: &mut HashMap<NodeHandle, VisitStatus>) -> bool {
+        if let Some(status) = visit.get(&current) && *status == VisitStatus::Visited {
+            return false;
+        }
+
         let _ = visit.insert(current.clone(), VisitStatus::Visiting);
         
         let neighbors = current.inner.out_edges.borrow();
