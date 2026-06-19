@@ -28,11 +28,17 @@ impl<T, F: Fn(&T) -> bool> DemuxSender<T, F> {
     ///
     ///  If `f(&value)` is true, send `value` to `tx_true`. Otherwise, send `value` to `tx_false`.
     pub fn send(&self, value: T) -> Result<(), SendError<T>> {
-        todo!()
+        match (self.f)(&value) {
+            true => self.tx_true.send(value),
+            false => self.tx_false.send(value)
+        }
     }
 }
 
 /// Demux.
 pub fn demux<T, F: Fn(&T) -> bool>(f: F) -> (DemuxSender<T, F>, Receiver<T>, Receiver<T>) {
-    todo!()
+    let (tx_true, rx_true) = channel();
+    let (tx_false, rx_false) = channel();
+
+    (DemuxSender { tx_true, tx_false, f }, rx_true, rx_false)
 }
