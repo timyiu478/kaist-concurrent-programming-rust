@@ -13,7 +13,15 @@ use etrace::*;
 /// Read the `test_ping_pong` function in `small_exercises_grade.rs` to figure out what it should
 /// do.
 pub fn pong(rx1: &mut Receiver<u32>, tx2: &mut Sender<u32>) -> bool {
-    todo!()
+    match rx1.recv() {
+        Ok(x) => {
+            match tx2.send(x+1) {
+               Ok(_) => true,
+               Err(_) => false
+            }
+        },
+        Err(_) => false
+    }
 }
 
 /// Executes the given functions (f1, f2) in concurrent and returns the results.
@@ -31,5 +39,11 @@ where
     F1: Send + FnOnce() -> T1 + 'scope,
     F2: Send + FnOnce() -> T2 + 'scope,
 {
-    todo!()
+    let handler1 = s.spawn(f1);
+    let handler2 = s.spawn(f2);
+
+    let t1 = handler1.join().unwrap();
+    let t2 = handler2.join().unwrap();
+
+    (t1, t2)
 }
