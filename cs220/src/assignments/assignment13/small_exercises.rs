@@ -19,7 +19,9 @@ pub fn sigma_par<T, F: Fn(T) -> i64 + Sync + Send>(
     inner: impl ParallelIterator<Item = T>,
     f: F,
 ) -> i64 {
-    todo!()
+    let mut inner = inner;
+
+    inner.map(|x| f(x)).sum()
 }
 
 /// Alternate elements from three iterators until they have run out.
@@ -40,7 +42,21 @@ pub fn interleave3_par<T: Send>(
     list2: impl IndexedParallelIterator<Item = T>,
     list3: impl IndexedParallelIterator<Item = T>,
 ) -> Vec<T> {
-    todo!()
+    let zipped = (list1, list2, list3).into_par_iter();
+    let len = zipped.len();
+
+    // 1. Zip a parallel range with our data to keep strict indexing traits
+    // 2. Map chunks into flat arrays
+    // 3. Use flat_map to yield a true 1D IndexedParallelIterator
+    (0..len)
+        .into_par_iter()
+        .zip(zipped)
+        .flat_map(|(_index, (a, b, c))| {
+            // Rayon's flat_map on an IndexedParallelIterator requires 
+            // the inner item to implement IntoParallelIterator (like an array)
+            [a, b, c]
+        })
+        .collect()
 }
 
 /// Parallel vector addition
@@ -56,7 +72,10 @@ pub fn interleave3_par<T: Send>(
 /// assert_eq!(res, vec![2.0, 4.0, 6.0, 8.0, 10.0]);
 /// ```
 pub fn vec_add_par(lhs: &[f64], rhs: &[f64]) -> Vec<f64> {
-    todo!()
+    (lhs, rhs)
+        .into_par_iter()
+        .map(|(a, b)| a+b)
+        .collect()
 }
 
 /// Parallel dot product of two arrays
@@ -76,7 +95,10 @@ pub fn vec_add_par(lhs: &[f64], rhs: &[f64]) -> Vec<f64> {
 /// assert_eq!(res, 55.0);
 /// ```
 pub fn dot_product_par(lhs: &[f64], rhs: &[f64]) -> f64 {
-    todo!()
+    (lhs, rhs)
+        .into_par_iter()
+        .map(|(a, b)| a*b)
+        .sum()
 }
 
 /// Parallel Matrix multiplication
@@ -109,5 +131,13 @@ pub fn dot_product_par(lhs: &[f64], rhs: &[f64]) -> f64 {
 /// assert_eq!(ans, res);
 /// ```
 pub fn matmul_par(lhs: &[Vec<f64>], rhs: &[Vec<f64>]) -> Vec<Vec<f64>> {
-    todo!()
+    lhs.par_iter()
+        .map(|v1| {
+            rhs.iter()
+                .map(|v2| {
+                    v1.iter().zip(v2.iter()).map(|(a, b)| a * b).sum::<f64>()
+                })
+                .collect::<Vec<f64>>()
+        })
+        .collect()
 }
