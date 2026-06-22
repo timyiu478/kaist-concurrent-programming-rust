@@ -4,7 +4,7 @@ This repository contains my implementation of concurrent data structures and lib
 
 ## Course Overview
 
-**Understand the motivations and challenges of concurrent programming.** Learn design patterns and principles for reasoning about concurrency. Design, implement, and evaluate concurrent programs. Apply knowledge to real-world parallel systems.
+**Understand the motivations and challenges of concurrent programming.** Learn design patterns and principles for reasoning about concurrency. Design, implement, and evaluate concurrent programs.
 
 ## Implementations
 
