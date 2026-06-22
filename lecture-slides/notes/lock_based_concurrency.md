@@ -16,10 +16,9 @@ Lock-based concurrency high-level API:
 
 Interior Mutability:
 
+* get mutable access through a shared/immutable reference
 * encapsulate unsafe operations into safe API
-* borrow checker executes in runtime
-
-Send vs Sync trait:
+* the rule of borrowing are enforced dynamically at runtime
 
 * Send
     * Safe to move ownership to another thread
@@ -69,4 +68,14 @@ Lock API:
 
 * Rust does not guarantee that unlock is only be called by the owner. Its the responsibility of the API user.
 * User should pass the token he obtain from the lock() when he calls unlock() as a proof of ownership
+* The RawLock primitive exposes a lock() and unlock() API, whereas the Lock abstraction encapsulates the raw lock alongside the underlying data it guards
 
+Crossbeam:
+
+* scoped thread: the threads inside the scope will not outlive the thread who spawn them => can share/borrow the stack variables
+* cached pad: pads and aligns a value to the length of a cache line => values are not in the same cache line => no false sharing
+    * motivation: false sharing
+        * Different threads run on different cores, but their caches store copies of the same cache line.
+        * When one thread updates its data, it invalidates the entire cache line for all other cores' caches, even though those threads are reading or writing entirely different memory locations within that line.
+* channel
+    * select! marcro: receive one message from multiple channels
