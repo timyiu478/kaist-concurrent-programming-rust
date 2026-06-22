@@ -8,39 +8,9 @@ This repository contains my implementation of concurrent data structures and lib
 
 ## Implementations
 
-### Core Concurrent Data Structures
+### [Hello Server](homework/src/hello_server)
 
-1. **Arc** - Atomic Reference Counting for shared ownership across threads
-   - Enables safe shared access to heap data without garbage collection
-   - Foundation for building other concurrent structures
-
-2. **BoC (Bag of Counts)** - A concurrency pattern using CownPtr
-   - Demonstrates scalable concurrent counting
-   - Lock-free approach to distributed counters
-
-3. **ElimStack** - Elimination-based stack for concurrent access
-   - Scales better than traditional locked stacks
-   - Threads coordinate directly to eliminate push-pop pairs
-
-4. **LinkedList** - Concurrent linked list implementation
-   - Fine-grained locking and optimistic approaches
-   - Handling concurrent insertions, deletions, and lookups
-
-5. **HashTable** - Concurrent hash table structures
-   - **GrowableArray**: Dynamic resizing concurrent hash table
-   - **SplitOrderedList**: Ordered hash table variant for better cache locality
-
-6. **ListSet** - Concurrent set implementations
-   - **FineGrainedListSet**: Node-level locking for concurrency
-   - **OptimisticFineGrainedListSet**: Optimistic locking to reduce contention
-
-7. **ADT (Abstract Data Types)** - High-level concurrent collections
-   - **ConcurrentMap**: Thread-safe key-value store
-   - **ConcurrentSet**: Thread-safe set data structure
-
-### Hello Server - Real-world Application
-
-A practical concurrent web server demonstrating how to apply concurrent programming patterns to production systems:
+A practical concurrent web server demonstrating how to apply concurrent programming patterns:
 
 - **TcpListener** - Cancellable TCP listener with atomic flags
   - Thread-safe cancellation mechanism
@@ -49,21 +19,47 @@ A practical concurrent web server demonstrating how to apply concurrent programm
 - **ThreadPool** - Work-stealing thread pool implementation
   - Fixed number of threads processing jobs concurrently
   - Automatic thread cleanup with `Drop`
-  - Job synchronization using condition variables
-
-- **Handler** - HTTP request processor with caching
-  - Parses HTTP GET requests
-  - Demonstrates expensive computation patterns
-  - Integrates with cache for performance
 
 - **Cache** - Fine-grained concurrent cache
   - Per-key locking to avoid blocking unrelated operations
   - Ensures expensive computations run only once per key
   - Uses HashMap Entry API for efficient concurrent updates
 
+- **Handler** - HTTP request processor with caching
+  - Parses HTTP GET requests
+  - Demonstrates expensive computation patterns
+  - Integrates with cache for performance
+
 - **Statistics** - Server metrics tracking
   - Collects request statistics
   - Tracks cache hit/miss patterns
+
+### Core Concurrent Data Structures
+
+1. **[TODO: Arc](homework/src/arc.rs)** - Atomic Reference Counting for shared ownership across threads
+   - Enables safe shared access to heap data without garbage collection
+   - Foundation for building other concurrent structures
+
+2. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
+   - Demonstrates scalable concurrent counting
+   - Lock-free approach to distributed counters
+
+3. **[TODO: ElimStack](home/src/elim_stack)** - Elimination-based stack for concurrent access
+   - Scales better than traditional locked stacks
+   - Threads coordinate directly to eliminate push-pop pairs
+
+4. **[TODO: LinkedList](home/src/linked_list.rs)** - Concurrent linked list implementation
+   - Fine-grained locking and optimistic approaches
+   - Handling concurrent insertions, deletions, and lookups
+
+5. **[TODO: HashTable](home/src/hash_table)** - Concurrent hash table structures
+   - **GrowableArray**: Dynamic resizing concurrent hash table
+   - **SplitOrderedList**: Ordered hash table variant for better cache locality
+
+6. **[TODO: ListSet](home/src/list_set)** - Concurrent set implementations
+   - **FineGrainedListSet**: Node-level locking for concurrency
+   - **OptimisticFineGrainedListSet**: Optimistic locking to reduce contention
+
 
 ## Testing & Verification
 
