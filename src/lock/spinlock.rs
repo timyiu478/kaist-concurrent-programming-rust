@@ -30,6 +30,7 @@ unsafe impl RawLock for SpinLock {
             .compare_exchange(false, true, Acquire, Relaxed)
             .is_err()
         {
+            // Performs exponential backoff in spin loops
             backoff.snooze();
         }
     }
