@@ -39,7 +39,6 @@ impl CancellableTcpListener {
         // Set the flag first and make a bogus connection to itself to wake up the listener blocked
         // in `accept`. Use `TcpListener::local_addr` and `TcpStream::connect`.
         self.is_canceled.store(true, Ordering::Release);
-        
         let addr = self.inner.local_addr()?;
         let _ = TcpStream::connect(addr);
 

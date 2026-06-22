@@ -15,7 +15,7 @@ pub struct Cache<K, V> {
 impl<K, V> Default for Cache<K, V> {
     fn default() -> Self {
         Self {
-            inner: Mutex::new(HashMap::new())
+            inner: Mutex::new(HashMap::new()),
         }
     }
 }
