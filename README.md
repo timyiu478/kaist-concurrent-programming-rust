@@ -36,7 +36,7 @@ A practical concurrent web server demonstrating how to apply concurrent programm
 
 ### Core Concurrent Data Structures
 
-1. **[TODO: Arc](homework/src/arc.rs)** - Atomic Reference Counting for shared ownership across threads
+1. **[Arc](homework/src/arc.rs)** - Atomic Reference Counting for shared ownership across threads
    - Enables safe shared access to heap data without garbage collection
    - Foundation for building other concurrent structures
 
