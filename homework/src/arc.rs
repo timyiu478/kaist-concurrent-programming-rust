@@ -208,14 +208,20 @@ impl<T> Arc<T> {
     /// ```
     #[inline]
     pub fn get_mut(this: &mut Self) -> Option<&mut T> {
-        todo!()
+        unsafe {
+            if this.is_unique() {
+                let mut inner_ptr = this.ptr.as_mut();
+                return Some(&mut inner_ptr.data);
+            }
+            None
+        }
     }
 
     // Used in `get_mut` and `make_mut` to check if the given `Arc` is the unique reference to the
     // underlying data.
     #[inline]
     fn is_unique(&mut self) -> bool {
-        todo!()
+        self.inner().count.load(Ordering::Acquire) == 1
     }
 
     /// Returns a mutable reference into the given `Arc` without any check.
@@ -266,7 +272,7 @@ impl<T> Arc<T> {
     /// ```
     #[inline]
     pub fn count(this: &Self) -> usize {
-        todo!()
+        this.inner().count.load(Ordering::Acquire)
     }
 
     #[inline]
@@ -317,7 +323,21 @@ impl<T> Arc<T> {
     /// ```
     #[inline]
     pub fn try_unwrap(this: Self) -> Result<T, Self> {
-        todo!()
+        unsafe {
+            let ptr = this.ptr.as_ptr();
+
+            if (*ptr).count.load(Ordering::Acquire) == 1 {
+                // Avoid double-free
+                std::mem::forget(this);
+
+                let inner_box = Box::from_raw(ptr);
+
+                // Move data out of inner_box
+                Ok(inner_box.data)
+            } else {
+                Err(this)
+            }
+        }
     }
 }
 
@@ -349,7 +369,14 @@ impl<T: Clone> Arc<T> {
     /// ```
     #[inline]
     pub fn make_mut(this: &mut Self) -> &mut T {
-        todo!()
+        unsafe {
+            if !this.is_unique() {
+                let data = this.ptr.as_ref().data.clone();
+                let mut new_arc = Arc::new(data);
+                *this = new_arc;
+            }
+            &mut this.ptr.as_mut().data
+        }
     }
 }
 
@@ -374,7 +401,11 @@ impl<T> Clone for Arc<T> {
     /// ```
     #[inline]
     fn clone(&self) -> Arc<T> {
-        todo!()
+        let old_size = self.inner().count.fetch_add(1, Ordering::Relaxed);
+        if old_size > MAX_REFCOUNT {
+            std::process::abort();
+        }
+        Arc::from_inner(self.ptr)
     }
 }
 
@@ -413,7 +444,14 @@ impl<T> Drop for Arc<T> {
     /// drop(foo2);   // Prints "dropped!"
     /// ```
     fn drop(&mut self) {
-        todo!()
+        if self.inner().count.fetch_sub(1, Ordering::Release) == 1 {
+            fence(Ordering::Acquire);
+
+            let ptr = self.ptr.as_ptr();
+            unsafe {
+                let _ = Box::from_raw(ptr);
+            }
+        }
     }
 }
 
