@@ -1,12 +1,15 @@
 # KAIST Concurrent Programming in Rust
 
-This repository contains my implementation of concurrent data structures and libraries in Rust, from the [KAIST CS431](https://github.com/kaist-cp/cs431) course.
+This repository contains my implementation of concurrent data structures and libraries in **Rust**, from the [KAIST CS431](https://github.com/kaist-cp/cs431) course.
 
 ## Course Overview
 
 **Understand the motivations and challenges of concurrent programming.** Learn design patterns and principles for reasoning about concurrency. Design, implement, and evaluate concurrent programs.
 
 ## Implementations
+
+> [!IMPORTANT]
+> The code here is offered as a learning aid to help you build intuition and see one possible way of solving the problem. Readers are strongly encouraged to engage actively with the material and develop their own independent implementations.
 
 ### [Hello Server](homework/src/hello_server)
 
