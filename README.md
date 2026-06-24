@@ -43,17 +43,17 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - Enables safe shared access to heap data without garbage collection
    - Foundation for building other concurrent structures
 
-2. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
+2. **[LinkedList](home/src/linked_list.rs)** - Concurrent linked list implementation
+   - Fine-grained locking and optimistic approaches
+   - Handling concurrent insertions, deletions, and lookups
+
+3. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
    - Demonstrates scalable concurrent counting
    - Lock-free approach to distributed counters
 
-3. **[TODO: ElimStack](home/src/elim_stack)** - Elimination-based stack for concurrent access
+4. **[TODO: ElimStack](home/src/elim_stack)** - Elimination-based stack for concurrent access
    - Scales better than traditional locked stacks
    - Threads coordinate directly to eliminate push-pop pairs
-
-4. **[TODO: LinkedList](home/src/linked_list.rs)** - Concurrent linked list implementation
-   - Fine-grained locking and optimistic approaches
-   - Handling concurrent insertions, deletions, and lookups
 
 5. **[TODO: HashTable](home/src/hash_table)** - Concurrent hash table structures
    - **GrowableArray**: Dynamic resizing concurrent hash table
