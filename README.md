@@ -43,9 +43,9 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - Enables safe shared access to heap data without garbage collection
    - Foundation for building other concurrent structures
 
-2. **[LinkedList](home/src/linked_list.rs)** - Concurrent linked list implementation
-   - Fine-grained locking and optimistic approaches
+2. **[Doubly linked list](home/src/linked_list.rs)** - Concurrent linked list implementation
    - Handling concurrent insertions, deletions, and lookups
+   - Focus on the basic raw pointer operations
 
 3. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
    - Demonstrates scalable concurrent counting
