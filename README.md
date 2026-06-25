@@ -43,7 +43,7 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - Enables safe shared access to heap data without garbage collection
    - Foundation for building other concurrent structures
 
-2. **[Doubly linked list](home/src/linked_list.rs)** - Concurrent linked list implementation
+2. **[Doubly linked list](homework/src/linked_list.rs)** - Concurrent linked list implementation
    - Handling concurrent insertions, deletions, and lookups
    - Focus on the basic raw pointer operations
 
@@ -51,15 +51,15 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - Demonstrates scalable concurrent counting
    - Lock-free approach to distributed counters
 
-4. **[TODO: ElimStack](home/src/elim_stack)** - Elimination-based stack for concurrent access
+4. **[TODO: ElimStack](homework/src/elim_stack)** - Elimination-based stack for concurrent access
    - Scales better than traditional locked stacks
    - Threads coordinate directly to eliminate push-pop pairs
 
-5. **[TODO: HashTable](home/src/hash_table)** - Concurrent hash table structures
+5. **[TODO: HashTable](homework/src/hash_table)** - Concurrent hash table structures
    - **GrowableArray**: Dynamic resizing concurrent hash table
    - **SplitOrderedList**: Ordered hash table variant for better cache locality
 
-6. **[TODO: ListSet](home/src/list_set)** - Concurrent set implementations
+6. **[TODO: ListSet](homework/src/list_set)** - Concurrent set implementations
    - **FineGrainedListSet**: Node-level locking for concurrency
    - **OptimisticFineGrainedListSet**: Optimistic locking to reduce contention
 
