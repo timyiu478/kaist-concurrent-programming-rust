@@ -82,6 +82,7 @@ unsafe impl RawLock for McsLock {
                 return;
             }
 
+            // node != self.tail -> wait next != null
             while {
                 next = unsafe { (*node).next.load(Acquire) };
                 next.is_null()
