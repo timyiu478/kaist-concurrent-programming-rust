@@ -79,3 +79,58 @@ Crossbeam:
         * When one thread updates its data, it invalidates the entire cache line for all other cores' caches, even though those threads are reading or writing entirely different memory locations within that line.
 * channel
     * select! marcro: receive one message from multiple channels
+
+LockGuard:
+
+* Send if T is Send -> it is possible that one thread acquires a lock and another thread release a lock
+* Sync if T is Sync: since T is sync, it is "safe" to share the lock guard
+
+CLH Lock:
+
+* Local Spinning on Independent Locations (the predecessor's node)
+* Because only the immediate successor is watching that specific node, only one CPU cache line is invalidated
+* Ordering of lock owner is decided by the tail
+* Thread A allocates a node, but its successor (Thread B) is the one that eventually reuses or deallocates it
+    * Performance Penalties
+
+MCS Lock:
+
+* a variant of CLH lock that resolves the problem of CLH lock
+* Node has a next pointer points to the next node (the next lock owner)
+* Acquire lock successfully if the node.locked == false or prev == null
+
+```
+[beginning]
+tail -> null
+   
+   
+[A lock()]
+tail -> nodeA
+  
+nodeA: {true, null}
+prev: null
+token: nodeA
+
+                                [B lock()]
+                                tail -> nodeB
+
+                                nodeB: {true, null}
+                                prev: nodeA
+                                nodeA: {true, nodeB}
+                                ...(waiting nodeB.locked == false)
+
+[A unlock()]
+tail -> nodeB
+
+deallocate nodeA
+nodeB: {false, null}
+                                return token(nodeB)
+
+                                [B unlock()]
+                                tail -> nodeB
+
+                                nodeB: {true, null}
+
+                                swap(tail, null ptr) // no thread is waiting
+                                deallocate nodeB
+```
