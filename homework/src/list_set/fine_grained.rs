@@ -45,7 +45,23 @@ impl<T: Ord> Cursor<'_, T> {
     /// Moves the cursor to the position of key in the sorted list.
     /// Returns whether the value was found.
     fn find(&mut self, key: &T) -> bool {
-        todo!()
+        unsafe {
+            while let Some(node) = (*self.0).as_ref() {
+                if node.data == *key {
+                    return true;
+                }
+                if node.data > *key {
+                    return false;
+                }
+                if let Ok(next_g) = node.next.lock() {
+                    self.0 = next_g;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        false
     }
 }
 
@@ -60,7 +76,13 @@ impl<T> FineGrainedListSet<T> {
 
 impl<T: Ord> FineGrainedListSet<T> {
     fn find(&self, key: &T) -> (bool, Cursor<'_, T>) {
-        todo!()
+        match self.head.lock() {
+            Ok(g) => {
+                let mut cursor = Cursor(g);
+                (cursor.find(key), cursor)
+            }
+            Err(_) => panic!("Fail to acquire head lock"),
+        }
     }
 }
 
@@ -70,11 +92,44 @@ impl<T: Ord> ConcurrentSet<T> for FineGrainedListSet<T> {
     }
 
     fn insert(&self, key: T) -> bool {
-        todo!()
+        let (found, mut cursor) = self.find(&key);
+
+        if found {
+            false
+        } else {
+            let target_ptr = *cursor.0;
+            let new_node = Node::new(key, target_ptr);
+            *cursor.0 = new_node;
+
+            true
+        }
     }
 
     fn remove(&self, key: &T) -> bool {
-        todo!()
+        let (found, mut cursor) = self.find(key);
+
+        if !found {
+            return false;
+        }
+
+        unsafe {
+            let target_ptr = *cursor.0;
+            if target_ptr.is_null() {
+                return false;
+            }
+            let mut target_node = &*target_ptr;
+
+            // lock the node that going to be removed
+            if let Ok(next_g) = target_node.next.lock() {
+                // update pointer
+                *cursor.0 = *next_g;
+            }
+
+            // claim the ownership of target node and then drop it
+            let _ = Box::from_raw(target_ptr);
+        }
+
+        true
     }
 }
 
@@ -96,13 +151,32 @@ impl<'l, T> Iterator for Iter<'l, T> {
     type Item = &'l T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        unsafe {
+            if (*self.cursor).is_null() {
+                return None;
+            }
+            let current_node: &Node<T> = &**self.cursor;
+            if let Ok(next_g) = current_node.next.lock() {
+                self.cursor = next_g;
+                Some(&current_node.data)
+            } else {
+                None
+            }
+        }
     }
 }
 
 impl<T> Drop for FineGrainedListSet<T> {
     fn drop(&mut self) {
-        todo!()
+        // bypass mutex to get the mut pointer of the Node
+        let mut current = *self.head.get_mut().unwrap();
+
+        while !current.is_null() {
+            unsafe {
+                let mut node_box = Box::from_raw(current);
+                current = *node_box.next.get_mut().unwrap();
+            }
+        }
     }
 }
 

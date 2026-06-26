@@ -47,21 +47,23 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - Handling concurrent insertions, deletions, and lookups
    - Focus on the basic raw pointer operations
 
-3. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
-   - Demonstrates scalable concurrent counting
-   - Lock-free approach to distributed counters
+3. **ListSet** - Concurrent set implementations
+   - **[FineGrainedListSet](homework/src/list_set/fine_grained.rs)**: Node-level locking for concurrency
+   - **OptimisticFineGrainedListSet**: Optimistic locking to reduce contention
 
-4. **[TODO: ElimStack](homework/src/elim_stack)** - Elimination-based stack for concurrent access
-   - Scales better than traditional locked stacks
-   - Threads coordinate directly to eliminate push-pop pairs
+4. **[TODO: Hazard pointers](homework/src/hazard_pointer)**
 
 5. **[TODO: HashTable](homework/src/hash_table)** - Concurrent hash table structures
    - **GrowableArray**: Dynamic resizing concurrent hash table
    - **SplitOrderedList**: Ordered hash table variant for better cache locality
 
-6. **[TODO: ListSet](homework/src/list_set)** - Concurrent set implementations
-   - **FineGrainedListSet**: Node-level locking for concurrency
-   - **OptimisticFineGrainedListSet**: Optimistic locking to reduce contention
+6. **[TODO: ElimStack](homework/src/elim_stack)** - Elimination-based stack for concurrent access
+   - Scales better than traditional locked stacks
+   - Threads coordinate directly to eliminate push-pop pairs
+
+7. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
+   - Demonstrates scalable concurrent counting
+   - Lock-free approach to distributed counters
 
 
 ## Testing & Verification
