@@ -134,3 +134,8 @@ nodeB: {false, null}
                                 swap(tail, null ptr) // no thread is waiting
                                 deallocate nodeB
 ```
+
+MCS Parking Lock:
+
+* instead of spin waiting when waiting the lock, the waiting thread call `park` to pauses a thread indefinitely
+* when the lock owner release the lock, it will unpack/wakeup the next thread owner
