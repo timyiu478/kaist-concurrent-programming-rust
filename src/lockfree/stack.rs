@@ -91,6 +91,14 @@ impl<T> Stack<T> {
                 let result = unsafe { h.data.assume_init_read() };
 
                 // SAFETY: `head` is unreachable, and we no longer access `head`.
+                // Why defer destory head? It avoids use-after-head.
+                // Imagine two threads A and B called pop().
+                // 1. Thread A executes let head = self.head.load(...). It now holds a pointer to Node 1.
+                // 2. Thread B also executes let head = self.head.load(...). It also holds a pointer to Node 1.
+                // 3. Thread A executes its compare_exchange and succeeds! The stack is now just [Node 2]. Node 1 is officially "unreachable" from the stack.
+                // 4. Thread A decides to immediately destroy and free the memory for Node 1 (e.g., using standard drop).
+                // 5. Thread B wakes back up. It is currently at the line let next = Shared::from(h.next);, trying to read the next pointer inside Node 1.
+                // 6. CRASH. Thread B just tried to read memory that Thread A already freed.
                 unsafe { guard.defer_destroy(head) };
 
                 return Some(result);
