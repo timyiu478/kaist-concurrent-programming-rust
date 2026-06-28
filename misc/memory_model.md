@@ -1,3 +1,5 @@
+# Hardware Memory Models
+
 * Memory (Consistency) model:
     * It is a contract between hardware and software.
     * It defines the allowed orderings of memory operations (reads and writes) when multiple threads run concurrently.
@@ -9,8 +11,6 @@
     * Obey the single thread behaviour: read-my-own-write
     * All writes to the same location will be seen in the same order for all threads
     * How does it work? The writes are stored in the local store buffer first and then propagate the shared memory.
-* A Happen-Before relationship: if a statement A happen-before B, the memory model guarantees that **all memory writes by A are visible to B**
-    * When Thread A releases a lock, it doesn't just unlock the door; it forces a "memory flush" of everything it did while it held the lock. When Thread B subsequently acquires that same lock, it performs a "memory refresh," making all of Thread A's changes visible to it.
 
 ```c
 // Shared variables
@@ -29,8 +29,27 @@ print(data);             // 5. Guaranteed to print 42!
 print(ready);            // 6. Guaranteed to print true!
 ```
 
+# Software Memory Models (Language Layer)
 
-References:
+* Relatex Memory order:
+    * obeys single-thread behavior: monotonic read
+    * each memory location has a total modification order
+        * this order can't be observed directly
+
+* Acquire-Release:
+    * A Happen-Before relationship: if a statement A happen-before B, the memory model guarantees that **all memory writes by A are visible to B**
+        * when Thread A releases a lock, it doesn't just unlock the door; it forces a "memory flush" of everything it did while it held the lock. When Thread B subsequently acquires that same lock, it performs a "memory refresh," making all of Thread A's changes visible to it.
+    * How to create a happen-before relationship?
+        * store-release
+        * load-acquire
+
+* Consume-Release:
+    * “Light version” of acquire/release
+    * Details: See slides 53-54 of think-cell_talk_memorymodel.pdf
+
+
+# References
 
 * https://jamesbornholt.com/blog/memory-models/
 * https://cseweb.ucsd.edu/classes/fa13/cse160-a/Lectures/Lec07.pdf
+* https://www.think-cell.com/assets/en/career/talks/pdf/think-cell_talk_memorymodel.pdf
