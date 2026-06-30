@@ -35,3 +35,5 @@ Lock-free Sorted Singly Linked List:
         * solution: logical deletion (add a tag to the delete node's next pointer in the unused lower bit to indicate this node is deleted)
             * insertion and logical deletion are changing the same memory location (delete node's next pointer) -> can be sychronized
     * travering: how to deal with logical deletion
+
+![](assets/lock_free_linked_list_logical_delete.png)
