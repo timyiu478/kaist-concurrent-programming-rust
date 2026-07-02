@@ -55,11 +55,13 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - Scales better than traditional locked stacks
    - Threads coordinate directly to eliminate push-pop pairs
 
-5. **[TODO: HashTable](homework/src/hash_table)** - Concurrent hash table structures
+5. **[Hazard pointers](homework/src/hazard_pointer)**
+    - Safe memory reclamation for lock-free objects
+    - Retire pointers with zero coordination by using thread local storage
+
+6. **[TODO: HashTable](homework/src/hash_table)** - Concurrent hash table structures
    - **GrowableArray**: Dynamic resizing concurrent hash table
    - **SplitOrderedList**: Ordered hash table variant for better cache locality
-
-6. **[TODO: Hazard pointers](homework/src/hazard_pointer)**
 
 7. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
    - Demonstrates scalable concurrent counting
