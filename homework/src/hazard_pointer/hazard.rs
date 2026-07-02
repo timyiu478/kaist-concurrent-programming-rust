@@ -23,7 +23,7 @@ impl Shield {
 
     /// Store `pointer` to the hazard slot.
     pub fn set<T>(&self, pointer: *mut T) {
-        todo!()
+        unsafe { self.slot.as_ref().hazard.store(pointer as *mut (), Ordering::SeqCst); }
     }
 
     /// Clear the hazard slot.
@@ -36,7 +36,12 @@ impl Shield {
     /// For a pointer `p`, if "`src` still pointing to `pointer`" implies that `p` is not retired,
     /// then `Ok(())` means that shields set to `p` are validated.
     pub fn validate<T>(pointer: *mut T, src: &AtomicPtr<T>) -> Result<(), *mut T> {
-        todo!()
+        let mut current_pointer = src.load(Ordering::SeqCst);
+        if current_pointer == pointer {
+            Ok(())
+        } else {
+            Err(current_pointer)
+        }
     }
 
     /// Try protecting `pointer` obtained from `src`. If not, returns the current value.
@@ -71,7 +76,8 @@ impl Default for Shield {
 impl Drop for Shield {
     /// Clear and release the ownership of the hazard slot.
     fn drop(&mut self) {
-        todo!()
+        self.clear();
+        unsafe { self.slot.as_ref().active.store(false, Ordering::SeqCst); }
     }
 }
 
@@ -105,7 +111,11 @@ struct HazardSlot {
 
 impl HazardSlot {
     fn new() -> Self {
-        todo!()
+        HazardSlot {
+            active: AtomicBool::new(false),
+            hazard: AtomicPtr::new(ptr::null_mut()),
+            next: ptr::null(),
+        }
     }
 }
 
@@ -129,17 +139,73 @@ impl HazardBag {
     /// Acquires a slot in the hazard set, either by recycling an inactive slot or allocating a new
     /// slot.
     fn acquire_slot(&self) -> &HazardSlot {
-        todo!()
+        if let Some(slot) = self.try_acquire_inactive() {
+            return slot;
+        }
+
+        let mut new_slot = Box::into_raw(Box::new(HazardSlot::new()));
+        let mut head_ptr = self.head.load(Ordering::Acquire);
+        unsafe {
+            (*new_slot).active.store(true, Ordering::Relaxed);
+            (*new_slot).next = head_ptr;
+        }
+
+        loop {
+             
+            match self.head.compare_exchange(head_ptr, new_slot, Ordering::Release, Ordering::Relaxed) {
+                Ok(_) => return unsafe { &*new_slot },
+                Err(actual_head) => {
+                    head_ptr = actual_head;
+                    unsafe {
+                        (*new_slot).next = actual_head;
+                    }
+                }
+            }
+        }
     }
 
     /// Find an inactive slot and activate it.
     fn try_acquire_inactive(&self) -> Option<&HazardSlot> {
-        todo!()
+        let mut slot_ptr: *const HazardSlot = self.head.load(Ordering::Acquire);
+        
+        while !slot_ptr.is_null() {
+            unsafe {
+                match (*slot_ptr).active.compare_exchange(
+                    false, 
+                    true, 
+                    Ordering::AcqRel, 
+                    Ordering::Relaxed
+                ) {
+                    Ok(_) => {
+                        return Some(&*slot_ptr);
+                    }
+                    Err(_) => {
+                        slot_ptr = (*slot_ptr).next;
+                    }
+                }
+            }
+        }
+        
+        None
     }
 
     /// Returns all the hazards in the set.
     pub fn all_hazards(&self) -> HashSet<*mut ()> {
-        todo!()
+        let mut hazards_set = HashSet::new();
+        let mut slot_ptr: *const HazardSlot = self.head.load(Ordering::Acquire);
+        
+        while !slot_ptr.is_null() {
+            unsafe {
+                let is_active = (*slot_ptr).active.load(Ordering::Acquire);
+                let hazard = (*slot_ptr).hazard.load(Ordering::Acquire);
+                if is_active && !hazard.is_null() {
+                    hazards_set.insert(hazard);
+                }
+                slot_ptr = (*slot_ptr).next;
+            }
+        }
+
+        hazards_set
     }
 }
 
@@ -152,7 +218,14 @@ impl Default for HazardBag {
 impl Drop for HazardBag {
     /// Frees all slots.
     fn drop(&mut self) {
-        todo!()
+        let mut slot_ptr = self.head.load(Ordering::Acquire);
+        while !slot_ptr.is_null() {
+            unsafe {
+                let next_ptr = (*slot_ptr).next;
+                let _ = Box::from_raw(slot_ptr);
+                slot_ptr = next_ptr as *mut HazardSlot;
+            }
+        }
     }
 }
 
