@@ -23,7 +23,12 @@ impl Shield {
 
     /// Store `pointer` to the hazard slot.
     pub fn set<T>(&self, pointer: *mut T) {
-        unsafe { self.slot.as_ref().hazard.store(pointer as *mut (), Ordering::SeqCst); }
+        unsafe {
+            self.slot
+                .as_ref()
+                .hazard
+                .store(pointer as *mut (), Ordering::SeqCst);
+        }
     }
 
     /// Clear the hazard slot.
@@ -77,7 +82,9 @@ impl Drop for Shield {
     /// Clear and release the ownership of the hazard slot.
     fn drop(&mut self) {
         self.clear();
-        unsafe { self.slot.as_ref().active.store(false, Ordering::SeqCst); }
+        unsafe {
+            self.slot.as_ref().active.store(false, Ordering::SeqCst);
+        }
     }
 }
 
@@ -151,8 +158,12 @@ impl HazardBag {
         }
 
         loop {
-             
-            match self.head.compare_exchange(head_ptr, new_slot, Ordering::Release, Ordering::Relaxed) {
+            match self.head.compare_exchange(
+                head_ptr,
+                new_slot,
+                Ordering::Release,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => return unsafe { &*new_slot },
                 Err(actual_head) => {
                     head_ptr = actual_head;
@@ -167,14 +178,14 @@ impl HazardBag {
     /// Find an inactive slot and activate it.
     fn try_acquire_inactive(&self) -> Option<&HazardSlot> {
         let mut slot_ptr: *const HazardSlot = self.head.load(Ordering::Acquire);
-        
+
         while !slot_ptr.is_null() {
             unsafe {
                 match (*slot_ptr).active.compare_exchange(
-                    false, 
-                    true, 
-                    Ordering::AcqRel, 
-                    Ordering::Relaxed
+                    false,
+                    true,
+                    Ordering::AcqRel,
+                    Ordering::Relaxed,
                 ) {
                     Ok(_) => {
                         return Some(&*slot_ptr);
@@ -185,7 +196,7 @@ impl HazardBag {
                 }
             }
         }
-        
+
         None
     }
 
@@ -193,7 +204,7 @@ impl HazardBag {
     pub fn all_hazards(&self) -> HashSet<*mut ()> {
         let mut hazards_set = HashSet::new();
         let mut slot_ptr: *const HazardSlot = self.head.load(Ordering::Acquire);
-        
+
         while !slot_ptr.is_null() {
             unsafe {
                 let is_active = (*slot_ptr).active.load(Ordering::Acquire);
