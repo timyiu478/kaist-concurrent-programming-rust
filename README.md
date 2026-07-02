@@ -51,15 +51,15 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - **[FineGrainedListSet](homework/src/list_set/fine_grained.rs)**: Node-level locking for concurrency
    - **OptimisticFineGrainedListSet**: Optimistic locking to reduce contention
 
-4. **[TODO: Hazard pointers](homework/src/hazard_pointer)**
+4. **[ElimStack](homework/src/elim_stack)** - Elimination-based stack for concurrent access
+   - Scales better than traditional locked stacks
+   - Threads coordinate directly to eliminate push-pop pairs
 
 5. **[TODO: HashTable](homework/src/hash_table)** - Concurrent hash table structures
    - **GrowableArray**: Dynamic resizing concurrent hash table
    - **SplitOrderedList**: Ordered hash table variant for better cache locality
 
-6. **[TODO: ElimStack](homework/src/elim_stack)** - Elimination-based stack for concurrent access
-   - Scales better than traditional locked stacks
-   - Threads coordinate directly to eliminate push-pop pairs
+6. **[TODO: Hazard pointers](homework/src/hazard_pointer)**
 
 7. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
    - Demonstrates scalable concurrent counting
