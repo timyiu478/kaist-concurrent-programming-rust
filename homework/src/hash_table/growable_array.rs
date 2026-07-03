@@ -171,7 +171,7 @@ impl<T> Segment<T> {
         }
 
         let childen = unsafe { ManuallyDrop::into_inner(self.children) };
-        
+
         for segment_atomic in childen {
             let mut ptr = unsafe { segment_atomic.load(Relaxed, crossbeam_epoch::unprotected()) };
             if !ptr.is_null() {
@@ -194,7 +194,7 @@ impl<T> Debug for Segment<T> {
 impl<T> Drop for GrowableArray<T> {
     /// Deallocate segments, but not the individual elements.
     fn drop(&mut self) {
-        unsafe { 
+        unsafe {
             let root_shared = self.root.load(Relaxed, crossbeam_epoch::unprotected());
             let height = root_shared.tag();
             let root_owned = root_shared.into_owned();
@@ -228,22 +228,28 @@ impl<T> GrowableArray<T> {
         loop {
             path.push(idx & mask);
             idx >>= SEGMENT_LOGSIZE;
-            if idx == 0 { break; }
+            if idx == 0 {
+                break;
+            }
         }
 
         // 2. Grow the tree upwards if necessary
         let mut root_shared = self.root.load(Acquire, guard);
         loop {
-            let current_height = if root_shared.is_null() { 0 } else { root_shared.tag() };
+            let current_height = if root_shared.is_null() {
+                0
+            } else {
+                root_shared.tag()
+            };
             let target_height = path.len(); // Total height required for this path
 
             if target_height > current_height || root_shared.is_null() {
                 // Prepare the base new root segment layer locally
-                let mut current_owned = Segment::new(); 
+                let mut current_owned = Segment::new();
                 unsafe {
                     current_owned.children[0].store(root_shared, Relaxed);
                 }
-                
+
                 // If the height gap is greater than 1, build all intermediate parent layers locally
                 for h in (current_height + 2)..=target_height {
                     let mut parent_owned = Segment::new();
@@ -253,17 +259,17 @@ impl<T> GrowableArray<T> {
                     }
                     current_owned = parent_owned;
                 }
-                
+
                 // Finalize the top of our newly prepared chain with the target height tag
                 let new_root_tagged = current_owned.with_tag(target_height);
-                
+
                 // Attempt a single atomic swap to install the entire multi-level chain
                 match self.root.compare_exchange(
-                    root_shared, 
+                    root_shared,
                     new_root_tagged,
-                    Release, 
-                    Acquire, 
-                    guard
+                    Release,
+                    Acquire,
+                    guard,
                 ) {
                     Ok(shared) => {
                         root_shared = shared;
@@ -272,7 +278,7 @@ impl<T> GrowableArray<T> {
                     Err(e) => {
                         // Another thread grew the tree first.
                         // e.new (our chain) safely drops out of scope. Retry with updated root.
-                        root_shared = e.current; 
+                        root_shared = e.current;
                     }
                 }
             } else {
@@ -297,19 +303,19 @@ impl<T> GrowableArray<T> {
                 let segment = current_node.deref();
                 &(*segment.children)[chunk]
             };
-            
+
             let mut child_shared = child_atomic.load(Acquire, guard);
 
             // Lazily allocate missing child nodes downward using Compare-and-Swap
             if child_shared.is_null() {
-                let new_child = Segment::new().with_tag(current_height - 1); 
-                
+                let new_child = Segment::new().with_tag(current_height - 1);
+
                 match child_atomic.compare_exchange(
-                    Shared::null(), 
-                    new_child, 
-                    Release, 
-                    Acquire, 
-                    guard
+                    Shared::null(),
+                    new_child,
+                    Release,
+                    Acquire,
+                    guard,
                 ) {
                     Ok(shared) => child_shared = shared,
                     Err(e) => child_shared = e.current, // Another thread allocated it first
@@ -320,7 +326,8 @@ impl<T> GrowableArray<T> {
             current_height -= 1;
         }
 
-        // 4. We are at height 1 (the leaf segment containing elements). Return the element reference.
+        // 4. We are at height 1 (the leaf segment containing elements). Return the element
+        //    reference.
         let leaf_chunk = path[0];
         unsafe {
             let segment = current_node.deref();
