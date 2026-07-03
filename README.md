@@ -59,9 +59,9 @@ A practical concurrent web server demonstrating how to apply concurrent programm
     - Safe memory reclamation for lock-free objects
     - Retire pointers with zero coordination by using thread local storage
 
-6. **[TODO: HashTable](homework/src/hash_table)** - Concurrent hash table structures
-   - **GrowableArray**: Dynamic resizing concurrent hash table
-   - **SplitOrderedList**: Ordered hash table variant for better cache locality
+6. **[HashTable](homework/src/hash_table)** - Concurrent hash table structures
+   - **GrowableArray**: Lock-free dynamic sized array
+   - **SplitOrderedList**: Lock-free extensible hash table
 
 7. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
    - Demonstrates scalable concurrent counting
