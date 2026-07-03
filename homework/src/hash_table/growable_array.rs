@@ -165,7 +165,23 @@ impl<T> Segment<T> {
     /// - `self` must actually have height `height`.
     /// - There should be no other references to possible children segments.
     unsafe fn deallocate(self, height: usize) {
-        todo!()
+        // Base Case: If height is 1, this segment contains actual `elements`.
+        if height <= 1 {
+            return;
+        }
+
+        let childen = unsafe { ManuallyDrop::into_inner(self.children) };
+        
+        for segment_atomic in childen {
+            let mut ptr = unsafe { segment_atomic.load(Relaxed, crossbeam_epoch::unprotected()) };
+            if !ptr.is_null() {
+                unsafe {
+                    let child_owned = ptr.into_owned();
+                    let child_boxed = child_owned.into_box();
+                    child_boxed.deallocate(height - 1);
+                }
+            }
+        }
     }
 }
 
@@ -178,7 +194,13 @@ impl<T> Debug for Segment<T> {
 impl<T> Drop for GrowableArray<T> {
     /// Deallocate segments, but not the individual elements.
     fn drop(&mut self) {
-        todo!()
+        unsafe { 
+            let root_shared = self.root.load(Relaxed, crossbeam_epoch::unprotected());
+            let height = root_shared.tag();
+            let root_owned = root_shared.into_owned();
+            let root_boxed = root_owned.into_box();
+            root_boxed.deallocate(height);
+        };
     }
 }
 
@@ -199,6 +221,110 @@ impl<T> GrowableArray<T> {
     /// Returns the reference to the `Atomic` pointer at `index`. Allocates new segments if
     /// necessary.
     pub fn get<'g>(&self, index: usize, guard: &'g Guard) -> &'g Atomic<T> {
-        todo!()
+        // 1. Calculate path (chunks from leaf to root)
+        let mut path = Vec::new();
+        let mut idx = index;
+        let mask = (1 << SEGMENT_LOGSIZE) - 1;
+        loop {
+            path.push(idx & mask);
+            idx >>= SEGMENT_LOGSIZE;
+            if idx == 0 { break; }
+        }
+
+        // 2. Grow the tree upwards if necessary
+        let mut root_shared = self.root.load(Acquire, guard);
+        loop {
+            let current_height = if root_shared.is_null() { 0 } else { root_shared.tag() };
+            let target_height = path.len(); // Total height required for this path
+
+            if target_height > current_height || root_shared.is_null() {
+                // Prepare the base new root segment layer locally
+                let mut current_owned = Segment::new(); 
+                unsafe {
+                    current_owned.children[0].store(root_shared, Relaxed);
+                }
+                
+                // If the height gap is greater than 1, build all intermediate parent layers locally
+                for h in (current_height + 2)..=target_height {
+                    let mut parent_owned = Segment::new();
+                    let current_tagged = current_owned.with_tag(h - 1); // Tag child with its height
+                    unsafe {
+                        parent_owned.children[0].store(current_tagged, Relaxed);
+                    }
+                    current_owned = parent_owned;
+                }
+                
+                // Finalize the top of our newly prepared chain with the target height tag
+                let new_root_tagged = current_owned.with_tag(target_height);
+                
+                // Attempt a single atomic swap to install the entire multi-level chain
+                match self.root.compare_exchange(
+                    root_shared, 
+                    new_root_tagged,
+                    Release, 
+                    Acquire, 
+                    guard
+                ) {
+                    Ok(shared) => {
+                        root_shared = shared;
+                        break; // Growth succeeded
+                    }
+                    Err(e) => {
+                        // Another thread grew the tree first.
+                        // e.new (our chain) safely drops out of scope. Retry with updated root.
+                        root_shared = e.current; 
+                    }
+                }
+            } else {
+                break; // Tree is already tall enough
+            }
+        }
+
+        // 3. Traverse downwards to the leaf segment (Height == 1)
+        let mut current_node = root_shared;
+        let mut current_height = current_node.tag();
+
+        while current_height > 1 {
+            // If the tree is currently taller than our computed path, pad upper layers with index 0
+            let chunk = if current_height <= path.len() {
+                path[current_height - 1]
+            } else {
+                0
+            };
+
+            let child_atomic = unsafe {
+                // Safe because current_height > 1, meaning it is an internal branch node
+                let segment = current_node.deref();
+                &(*segment.children)[chunk]
+            };
+            
+            let mut child_shared = child_atomic.load(Acquire, guard);
+
+            // Lazily allocate missing child nodes downward using Compare-and-Swap
+            if child_shared.is_null() {
+                let new_child = Segment::new().with_tag(current_height - 1); 
+                
+                match child_atomic.compare_exchange(
+                    Shared::null(), 
+                    new_child, 
+                    Release, 
+                    Acquire, 
+                    guard
+                ) {
+                    Ok(shared) => child_shared = shared,
+                    Err(e) => child_shared = e.current, // Another thread allocated it first
+                }
+            }
+
+            current_node = child_shared;
+            current_height -= 1;
+        }
+
+        // 4. We are at height 1 (the leaf segment containing elements). Return the element reference.
+        let leaf_chunk = path[0];
+        unsafe {
+            let segment = current_node.deref();
+            &(*segment.elements)[leaf_chunk]
+        }
     }
 }
