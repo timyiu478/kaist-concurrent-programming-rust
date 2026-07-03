@@ -3,7 +3,7 @@
 use core::mem;
 use core::ops::Deref;
 use core::sync::atomic::Ordering::*;
-use core::sync::atomic::{fence, AtomicUsize};
+use core::sync::atomic::{AtomicUsize, fence};
 
 use crossbeam_utils::Backoff;
 
@@ -177,11 +177,7 @@ impl<T> SeqLock<T> {
         let guard = unsafe { self.read_lock() };
         let result = f(&guard);
 
-        if guard.finish() {
-            Some(result)
-        } else {
-            None
-        }
+        if guard.finish() { Some(result) } else { None }
     }
 }
 
