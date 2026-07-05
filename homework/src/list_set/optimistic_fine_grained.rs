@@ -1,6 +1,6 @@
-use std::cmp::Ordering::*;
+use std::cmp::Ordering::{self, *};
 use std::mem::{self, ManuallyDrop};
-use std::sync::atomic::Ordering::*;
+use std::sync::atomic::Ordering::{Acquire, Relaxed, Release, SeqCst, *};
 
 use crossbeam_epoch::{Atomic, Guard, Owned, Shared, pin};
 use cs431::lock::seqlock::{ReadGuard, SeqLock};
@@ -13,7 +13,7 @@ struct Node<T> {
     next: SeqLock<Atomic<Node<T>>>,
 }
 
-/// Concurrent sorted singly linked list using fine-grained optimistic locking.
+/// Concurrent sorted singly linked list using fine-grained optimistic loc      king.
 #[derive(Debug)]
 pub struct OptimisticFineGrainedListSet<T> {
     head: SeqLock<Atomic<Node<T>>>,
@@ -44,7 +44,29 @@ impl<'g, T: Ord> Cursor<'g, T> {
     ///
     /// Return `Err(())` if the cursor cannot move.
     fn find(&mut self, key: &T, guard: &'g Guard) -> Result<bool, ()> {
-        todo!()
+        loop {
+            if self.curr.is_null() {
+                return Ok(false);
+            }
+            let curr_node = unsafe { self.curr.as_ref().unwrap() };
+            let data = &curr_node.data;
+            match data.cmp(key) {
+                Ordering::Equal => return Ok(true),
+                Ordering::Greater => return Ok(false),
+                Ordering::Less => {
+                    let next_guard = unsafe { curr_node.next.read_lock() };
+
+                    // We take ownership of the old guard out of self.prev using mem::replace
+                    let old_prev = mem::replace(&mut self.prev, next_guard);
+
+                    if !old_prev.finish() {
+                        return Err(());
+                    }
+
+                    self.curr = self.prev.load(Acquire, guard);
+                }
+            }
+        }
     }
 }
 
@@ -65,21 +87,72 @@ impl<T> OptimisticFineGrainedListSet<T> {
 
 impl<T: Ord> OptimisticFineGrainedListSet<T> {
     fn find<'g>(&'g self, key: &T, guard: &'g Guard) -> Result<(bool, Cursor<'g, T>), ()> {
-        todo!()
+        let mut cursor = self.head(guard);
+
+        match cursor.find(key, guard) {
+            Ok(found) => Ok((found, cursor)),
+            Err(()) => {
+                // Consuming the leftover ReadGuard on failure
+                let _ = cursor.prev.finish();
+                Err(())
+            }
+        }
     }
 }
 
 impl<T: Ord> ConcurrentSet<T> for OptimisticFineGrainedListSet<T> {
     fn contains(&self, key: &T) -> bool {
-        todo!()
+        let guard = pin();
+        loop {
+            if let Ok((found, mut cursor)) = self.find(key, &guard)
+                && cursor.prev.finish()
+            {
+                return found;
+            }
+        }
     }
 
     fn insert(&self, key: T) -> bool {
-        todo!()
+        let guard = pin();
+        loop {
+            if let Ok((found, mut cursor)) = self.find(&key, &guard) {
+                if found {
+                    if cursor.prev.finish() {
+                        return false;
+                    }
+                    continue;
+                }
+                // Assumed remove will acquire write locks for both prev and curr
+                if let Ok(mut write_prev) = cursor.prev.upgrade() {
+                    let node = Node::new(key, cursor.curr);
+                    write_prev.store(node, Release);
+                    return true;
+                }
+            }
+        }
     }
 
     fn remove(&self, key: &T) -> bool {
-        todo!()
+        let guard = pin();
+        loop {
+            if let Ok((found, mut cursor)) = self.find(key, &guard) {
+                if !found {
+                    if cursor.prev.finish() {
+                        return false;
+                    }
+                    continue;
+                }
+                if let Ok(mut write_prev) = cursor.prev.upgrade() {
+                    let next_node = unsafe { &cursor.curr.as_ref().unwrap().next };
+                    let next_guard = unsafe { next_node.read_lock() };
+                    if let Ok(mut write_curr) = next_guard.upgrade() {
+                        write_prev.store(write_curr.load(Acquire, &guard), Release);
+                        unsafe { guard.defer_destroy(cursor.curr) };
+                        return true;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -105,13 +178,41 @@ impl<'g, T> Iterator for Iter<'g, T> {
     type Item = Result<&'g T, ()>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let current = self.cursor.curr;
+
+        if current.is_null() {
+            let prev_guard = unsafe { std::ptr::read(&self.cursor.prev) };
+            if !prev_guard.finish() {
+                return Some(Err(()));
+            }
+            return None;
+        }
+        let current_node = unsafe { current.as_ref().unwrap() };
+        let next_guard = unsafe { current_node.next.read_lock() };
+        let old_prev = mem::replace(&mut self.cursor.prev, next_guard);
+
+        if !old_prev.finish() {
+            return Some(Err(()));
+        }
+
+        self.cursor.curr = self.cursor.prev.load(Acquire, self.guard);
+
+        Some(Ok(&current_node.data))
     }
 }
 
 impl<T> Drop for OptimisticFineGrainedListSet<T> {
     fn drop(&mut self) {
-        todo!()
+        let guard = pin();
+
+        let head_lock = mem::replace(&mut self.head, SeqLock::new(Atomic::null()));
+        let mut current_shared = head_lock.into_inner().load(Relaxed, &guard);
+
+        while let Some(node_ref) = unsafe { current_shared.as_ref() } {
+            let mut current_owned = unsafe { current_shared.into_owned() };
+            let next_lock = mem::replace(&mut current_owned.next, SeqLock::new(Atomic::null()));
+            current_shared = next_lock.into_inner().load(Relaxed, &guard);
+        }
     }
 }
 
