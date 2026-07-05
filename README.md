@@ -47,8 +47,8 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - Handling concurrent insertions, deletions, and lookups
    - Focus on the basic raw pointer operations
 
-3. **ListSet** - Concurrent set implementations
-   - **[FineGrainedListSet](homework/src/list_set/fine_grained.rs)**: Node-level locking for concurrency
+3. **[ListSet](homework/src/list_set/)** - Concurrent set implementations
+   - **FineGrainedListSet**: Node-level locking for concurrency
    - **OptimisticFineGrainedListSet**: Optimistic locking to reduce contention
 
 4. **[ElimStack](homework/src/elim_stack)** - Elimination-based stack for concurrent access
