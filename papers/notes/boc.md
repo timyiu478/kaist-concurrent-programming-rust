@@ -1,7 +1,7 @@
 * Cown: concurrent owned object
     * state: available or acquired by behavior
 
-* Behavior: list of cowns + closure
+* Behavior: list of cowns + thunk
     * when can be run: all cowns are available and all other behaviours which happen before it have been run
     * behavior can acquire multiple cowns at once
         * e.g. list 5
