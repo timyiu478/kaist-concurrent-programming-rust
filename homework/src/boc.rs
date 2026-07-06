@@ -204,6 +204,8 @@ impl Behavior {
     /// This ensures that the overall effect of the enqueue is atomic.
     fn schedule(self) {
         let boxed = Box::new(self);
+        // Because the Box was consumed by into_raw,
+        // Rust will not clean up that memory at the end of the schedule function
         let raw_self = Box::into_raw(boxed);
 
         unsafe {
@@ -232,13 +234,13 @@ impl Behavior {
 
         let behavior: Box<Behavior> = unsafe { Box::from_raw(this as *mut Behavior) };
 
-        let thunk = behavior.thunk;
-
-        thunk();
-
-        for r in behavior.requests {
-            unsafe { r.release() };
-        }
+        rayon::spawn(move || {
+            let thunk = behavior.thunk;
+            thunk();
+            for r in &behavior.requests {
+                unsafe { r.release() };
+            }
+        });
     }
 }
 
@@ -262,6 +264,7 @@ impl Behavior {
         let mut requests = cowns.requests();
 
         requests.sort();
+        requests.dedup();
 
         let count = AtomicUsize::new(requests.len() + 1);
 
