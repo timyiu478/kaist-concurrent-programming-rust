@@ -63,9 +63,9 @@ A practical concurrent web server demonstrating how to apply concurrent programm
    - **GrowableArray**: Lock-free dynamic sized array
    - **SplitOrderedList**: Lock-free extensible hash table
 
-7. **[TODO: BoC (Bag of Counts)](homework/src/boc.rs)** - A concurrency pattern using CownPtr
-   - Demonstrates scalable concurrent counting
-   - Lock-free approach to distributed counters
+7. **[Behaviour-Oriented Concurrency](homework/src/boc.rs)**
+   - BoC is datarace-free and deadlock-free by construction
+   - Asynchronously creat atomic and ordered units of work with exclusive access to a collection of independent resources
 
 
 ## Testing & Verification
