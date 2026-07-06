@@ -56,7 +56,20 @@ impl Request {
     /// `behavior` must be a valid raw pointer to the behavior for `self`, and this should be the
     /// only enqueueing of this request and behavior.
     unsafe fn start_enqueue(&self, behavior: *const Behavior) {
-        todo!()
+        let raw_self = self as *const Request as *mut Request;
+
+        let prev = self.target.last().swap(raw_self, SeqCst);
+
+        if prev.is_null() {
+            unsafe { Behavior::resolve_one(behavior) };
+            return;
+        }
+
+        while unsafe { !(*prev).scheduled.load(SeqCst) } {
+            hint::spin_loop();
+        }
+
+        unsafe { (*prev).next.store(behavior as *mut Behavior, SeqCst) };
     }
 
     /// Finish the second phase of the 2PL enqueue operation.
@@ -67,7 +80,7 @@ impl Request {
     ///
     /// All enqueues for smaller requests on this cown must have been completed.
     unsafe fn finish_enqueue(&self) {
-        todo!()
+        self.scheduled.store(true, SeqCst);
     }
 
     /// Release the cown to the next behavior.
@@ -79,7 +92,21 @@ impl Request {
     ///
     /// `self` must have been actually completed.
     unsafe fn release(&self) {
-        todo!()
+        if self.next.load(SeqCst).is_null() {
+            let raw_self = self as *const Request as *mut Request;
+            if self
+                .target
+                .last()
+                .compare_exchange(raw_self, ptr::null_mut(), SeqCst, SeqCst)
+                .is_ok()
+            {
+                return;
+            }
+            while self.next.load(SeqCst).is_null() {
+                hint::spin_loop();
+            }
+        }
+        unsafe { Behavior::resolve_one(self.next.load(SeqCst)) };
     }
 }
 
@@ -176,7 +203,18 @@ impl Behavior {
     /// Performs two phase locking (2PL) over the enqueuing of the requests.
     /// This ensures that the overall effect of the enqueue is atomic.
     fn schedule(self) {
-        todo!()
+        let boxed = Box::new(self);
+        let raw_self = Box::into_raw(boxed);
+
+        unsafe {
+            for r in &(*raw_self).requests {
+                r.start_enqueue(raw_self);
+            }
+            for r in &(*raw_self).requests {
+                r.finish_enqueue();
+            }
+            Behavior::resolve_one(raw_self);
+        }
     }
 
     /// Resolves a single outstanding request for `this`.
@@ -188,7 +226,19 @@ impl Behavior {
     ///
     /// `this` must be a valid behavior.
     unsafe fn resolve_one(this: *const Self) {
-        todo!()
+        if unsafe { (*this).count.fetch_sub(1, SeqCst) != 1 } {
+            return;
+        }
+
+        let behavior: Box<Behavior> = unsafe { Box::from_raw(this as *mut Behavior) };
+
+        let thunk = behavior.thunk;
+
+        thunk();
+
+        for r in behavior.requests {
+            unsafe { r.release() };
+        }
     }
 }
 
@@ -209,7 +259,23 @@ impl Behavior {
         C: CownPtrs + Send + 'static,
         F: for<'l> Fn(C::CownRefs<'l>) + Send + 'static,
     {
-        todo!()
+        let mut requests = cowns.requests();
+
+        requests.sort();
+
+        let count = AtomicUsize::new(requests.len() + 1);
+
+        let thunk_closure = move || {
+            let references = unsafe { cowns.get_mut() };
+            f(references);
+        };
+        let thunk = Box::new(thunk_closure);
+
+        Behavior {
+            thunk,
+            count,
+            requests,
+        }
     }
 }
 
