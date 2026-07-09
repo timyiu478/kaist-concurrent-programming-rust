@@ -27,6 +27,7 @@ pub enum Color {
 #[derive(Debug)]
 pub struct Player {
     memory: HashMap<isize, isize>,
+    count: usize,
 }
 
 impl Default for Player {
@@ -40,11 +41,20 @@ impl Player {
     pub fn new() -> Self {
         Self {
             memory: HashMap::new(),
+            count: 0,
         }
     }
 
     /// This function should return the index of the card to flip and the color to change to.
     pub fn flip_card_strategy(&mut self) -> (usize, Color) {
-        todo!()
+        let current_count = self.count % 6000;
+
+        self.count += 1;
+
+        let group = current_count / 3;
+        let offset = current_count % 3;
+        let idx = group * 5 + 2 + offset;
+
+        (idx, Color::White)
     }
 }
